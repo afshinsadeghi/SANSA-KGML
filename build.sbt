@@ -31,7 +31,7 @@ lazy val `download-database` = taskKey[Unit]("Download the word-net database and
 
 // cf.https://stackoverflow.com/questions/27466869/download-a-zip-from-url-and-extract-it-in-resource-using-sbt
 `download-database` := {
-  val configDir = file("src/main/config")
+  val configDir = file("config")
   val dbFile    = configDir / "wnjpn.db"
   val st        = streams.value
   if (dbFile.exists()) {
