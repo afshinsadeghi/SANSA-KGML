@@ -14,7 +14,7 @@ mvn clean package
 ````
 
 ### Installing wordNet database
-##### In the root directory of the project run:
+##### In the root directory of the project creat a folder with name "link" then run:
 ```
 sbt download-database
 ```
