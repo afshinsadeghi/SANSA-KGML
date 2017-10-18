@@ -8,7 +8,7 @@ Installation:
 
 ```
 git clone https://github.com/white-hat-of-github/SANSA-KGML.git
-cd SANSA-Template-Maven-Spark
+cd SANSA-KGML
 
 mvn clean package
 ````
