@@ -7,14 +7,14 @@ Installation:
 ----------
 
 ```
-git clone https://github.com/SANSA-Stack/SANSA-Spark-KG-ML.git
-cd SANSA-Template-Maven-Spark
+git clone https://github.com/white-hat-of-github/SANSA-KGML.git
+cd SANSA-KGML
 
 mvn clean package
 ````
 
 ### Installing wordNet database
-##### In the root directory of the project run:
+##### In the root directory of the project creat a folder with name "link" then run:
 ```
 sbt download-database
 ```
