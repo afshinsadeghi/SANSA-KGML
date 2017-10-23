@@ -69,7 +69,7 @@ object MergeGraphs {
 
 
 
-   this.printGraphInfo(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
+   //this.printGraphInfo(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
 
    this.creatMatrixModel(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
 
@@ -126,7 +126,7 @@ object MergeGraphs {
 
 
     predicates.take(5).foreach(println(_))
-    objects.foreach(println(_))
+    objects.take(5).foreach(println(_))
     /*
         val entries: RDD[MatrixEntry] = unifiedTriplesRDD.map(triple =>  triple.getObject.)  // an RDD of matrix entries
         // Create a CoordinateMatrix from an RDD[MatrixEntry].
