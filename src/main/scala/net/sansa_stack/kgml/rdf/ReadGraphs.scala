@@ -16,7 +16,7 @@ import ml.dmlc.mxnet.optimizer.SGD
 /*
     This object is for making unique set of predicates in one KB
  */
-object ReadMatrix {
+object ReadGraphs {
 
 
   def main(args: Array[String]) = {
