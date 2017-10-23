@@ -13,11 +13,14 @@ import net.sansa_stack.rdf.spark.io.NTripleReader
 import net.sansa_stack.rdf.spark.model.{JenaSparkRDD, JenaSparkRDDOps}
 import net.sansa_stack.rdf.spark.model.TripleRDD._
 import net.sansa_stack.rdf.spark.model.JenaSparkRDD
-import org.apache.jena.graph.Node_URI
+import org.aksw.jena_sparql_api.utils.Triples
+import org.apache.jena.graph
+import org.apache.jena.graph.{Node, Node_URI}
 import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.apache.spark.SparkContext
+import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry}
 import org.apache.spark.rdd.RDD
-
+import org.apache.spark.rdd.PairRDDFunctions
 
 /*
     This object is for merging KBs and making unique set of predicates in two KBs
@@ -46,7 +49,6 @@ object MergeGraphs {
 
     val unifiedTriplesRDD = triplesRDD.union(triplesRDD2)
 
-    unifiedTriplesRDD.take(50).foreach(println(_))
 
     val unionRelationIDs = (triplesRDD.getPredicates ++ triplesRDD2.getPredicates).distinct.zipWithUniqueId()
 
@@ -57,24 +59,15 @@ object MergeGraphs {
       .distinct
       .zipWithUniqueId()
 
-    //unionEntityIDs.take(5).foreach(println(_))
-    //unionRelationIDs.take(5).foreach(println(_))
 
-    def numEntities = unionEntityIDs.count()
-    println("Num union Entities "+  numEntities +  " \n")
-    def numRelations = unionRelationIDs.count()
-    println("Num union Relations "+ numRelations + " \n")
-
-    println("all 615 Relations  \n")
-    unionRelationIDs.take(615).foreach(println(_))
-
-    sparkSession.stop
-    sparkSession2.stop
     //val mappedTriples =
 
-    //done: put that into a matrix then merge the middle row
-    //done: take unique predicates
-    //done: convert entities and predicates to index of numbers
+
+
+   //this.printGraphInfo(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
+
+   this.creatMatrixModel(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
+
 
     //find their similarity, subjects and predicates. example> barak obama in different KBs
     // find similarites between URI of the same things in differnet  languages  of dbpeida
@@ -84,6 +77,77 @@ object MergeGraphs {
     // entities and relations with the negative entities (bad entities),
     // and the goal of the prediction part is giving a triplet
     // score with the vector representations of entities and relations.
+    sparkSession.stop
+    sparkSession2.stop
+  }
+
+  def printGraphInfo(unifiedTriplesRDD: RDD[graph.Triple], unionEntityIDs: RDD[(Node, Long)], unionRelationIDs: RDD[(Node, Long)]) ={
+    def numEntities = unionEntityIDs.count()
+    println("Num union Entities "+  numEntities +  " \n")
+    def numRelations = unionRelationIDs.count()
+    println("Num union Relations "+ numRelations + " \n")
+
+
+    println("10 first Relations  \n")
+    unionRelationIDs.take(10).foreach(println(_))
+
+    println("10 first triples of union RDD  \n")
+    unifiedTriplesRDD.take(10).foreach(println(_))
 
   }
+
+  //make two functions for 1: map urI to id, and 2: map id to URI
+  // assuming having this two functions, we make matrix of ids
+  def creatMatrixModel(unifiedTriplesRDD: RDD[graph.Triple], unionEntityIDs: RDD[(Node, Long)], unionRelationIDs: RDD[(Node, Long)]) = {
+
+    //unionEntityIDs.take(5).foreach(println(_))
+    //unionRelationIDs.take(5).foreach(println(_))
+
+    //reverse id and entity column
+    val iDtoEntityURIs =  unionEntityIDs.map(line => (line._2, line._1) )
+    //iDtoEntityURIs.take(5).foreach(println(_))
+
+    var subjects = unifiedTriplesRDD.map(line => line.getSubject)
+    var subjects2 = subjects.map(line => ((line.toString), (line)))
+
+    var unionEntityIDs2 = unionEntityIDs.map(line => (line._1.toString(),line))
+    //subjects2.take(5).foreach(println(_))
+
+    //subjects2.keys.take(5).foreach(println(_))
+    //unionEntityIDs.keys.take(5).foreach(println(_))
+
+    var test = subjects2.keys.intersection(unionEntityIDs2.keys)
+    //test.take(15).foreach(println(_))
+
+    var subjectWithIds = subjects2.fullOuterJoin(unionEntityIDs2).map(line => line._2)
+
+    subjects.take(5).foreach(println(_))
+    subjectWithIds.take(5).foreach(println(_))
+    //unifiedTriplesRDD.take(15).foreach(println(_))
+
+
+    var predicates = unifiedTriplesRDD.map(line => line.getPredicate)
+    var objects = unifiedTriplesRDD.map(line => line.getObject)
+    //var unifiedTriplesRDD2 =  unifiedTriplesRDD.map(line => (line.join() , v(1))).cache()
+
+      //unifiedTriplesRDD.aggregateBy() == triple.getSubject)
+
+    /*
+        val entries: RDD[MatrixEntry] = unifiedTriplesRDD.map(triple =>  triple.getObject.)  // an RDD of matrix entries
+        // Create a CoordinateMatrix from an RDD[MatrixEntry].
+        val mat: CoordinateMatrix = new CoordinateMatrix(entries)
+
+        // Get its size.
+        val m = mat.numRows()
+        val n = mat.numCols()
+
+        // Convert it to an IndexRowMatrix whose rows are sparse vectors.
+        val indexedRowMatrix = mat.toIndexedRowMatrix()
+
+    */
+    //done: put that into a matrix then merge the middle row
+    //done: take unique predicates
+    //done: convert entities and predicates to index of numbers
+  }
+
 }
