@@ -10,13 +10,13 @@ import org.apache.spark.sql.SparkSession
 import net.sansa_stack.rdf.spark.io.NTripleReader
 import java.io._
 
-import ml.dmlc.mxnet._
-import ml.dmlc.mxnet.optimizer.SGD
+//import ml.dmlc.mxnet._
+//import ml.dmlc.mxnet.optimizer.SGD
 
 /*
     This object is for making unique set of predicates in one KB
  */
-object ReadGraphs {
+object GetGraphsSpecs {
 
 
   def main(args: Array[String]) = {
@@ -46,10 +46,10 @@ object ReadGraphs {
     //triplesRDD.take(5).foreach(println(_))
     triplesRDD.cache()
 
-    println("Number of triples in the first KB\n")
+    println("Number of triples in the first KB\n")   //dbpedia 2457
     println(triplesRDD.count().toString)
 
-    println("Number of triples in the second KB\n")
+    println("Number of triples in the second KB\n") //yago 738
     println(triplesRDD2.count().toString)
 
 
@@ -80,7 +80,7 @@ object ReadGraphs {
     predicateCount.take(20).sortBy(f=> f._2  * -1 ).foreach(println(_))
     var SumAllPredicates =  predicates.distinct().count()
     println("20 Predicates from first RDD " + SumAllPredicates + "\n")
-    println(SumAllPredicates)
+    println(SumAllPredicates)  // 333
 
 
 
@@ -88,7 +88,7 @@ object ReadGraphs {
     predicateCount2.take(20).sortBy(f=> f._2  * -1 ).foreach(println(_))
     var SumAllPredicates2 =  predicates2.distinct().count()
     println(" 20 Predicates from second RDD " + SumAllPredicates2 + "\n")
-    println(SumAllPredicates2)
+    println(SumAllPredicates2) //83
 
     // above calculations in one line
     //println(" 10 from Predicates in first RDD ")
