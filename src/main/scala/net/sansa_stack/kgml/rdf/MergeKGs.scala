@@ -1,25 +1,54 @@
 package net.sansa_stack.kgml.rdf
 
-import org.apache.jena.graph
-import org.apache.jena.graph.Node
-import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry}
-import org.apache.spark.rdd.RDD
+/**
+  * Created by afshin on 10.10.17.
+  */
 
-class MergeKGs {
+import java.io.ByteArrayInputStream
+import java.net.URI
+
+import com.sun.rowset.internal.Row
+
+import scala.collection.{immutable, mutable}
+import org.apache.spark.sql.{Row, SparkSession}
+import net.sansa_stack.rdf.spark.io.NTripleReader
+import net.sansa_stack.rdf.spark.model.{JenaSparkRDD, JenaSparkRDDOps}
+import net.sansa_stack.rdf.spark.model.TripleRDD._
+import net.sansa_stack.rdf.spark.model.JenaSparkRDD
+import org.aksw.jena_sparql_api.utils.Triples
+import org.apache.jena.graph
+import org.apache.jena.graph.{Node, Node_URI, Triple}
+import org.apache.jena.riot.{Lang, RDFDataMgr}
+import org.apache.spark.SparkContext
+import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry}
+import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
+
+
+/*
+    This object is for merging KBs and making unique set of predicates in two KBs
+ */
+ class MergeKGs(cs : SparkContext,triplesRDD : RDD[org.apache.jena.graph.Triple], triplesRDD2 : RDD[Triple] ) {
+
+
   def printGraphInfo(unifiedTriplesRDD: RDD[graph.Triple], unionEntityIDs: RDD[(String, Long)],
                      unionRelationIDs: RDD[(String, Long)]): Unit = {
-
     def numEntities = unionEntityIDs.count()
+
     println("Num union Entities " + numEntities + " \n")
+
     def numRelations = unionRelationIDs.count()
+
     println("Num union Relations " + numRelations + " \n")
+
+
     println("10 first Relations  \n")
     unionRelationIDs.take(10).foreach(println(_))
+
     println("10 first triples of union RDD  \n")
     unifiedTriplesRDD.take(10).foreach(println(_))
   }
 
-  def create3ColumnModel(unifiedTriplesRDD: RDD[graph.Triple], unionEntityIDs: RDD[(String, Long)],
+    def create3ColumnModel(unifiedTriplesRDD: RDD[graph.Triple], unionEntityIDs: RDD[(String, Long)],
                          unionRelationIDs: RDD[(String, Long)]): (RDD[(Node, Long)], RDD[(Node, Long)], RDD[(Node, Long)]) = {
 
     var subjects = unifiedTriplesRDD.map(line => (line.getSubject.toString, line.getSubject))
@@ -37,7 +66,7 @@ class MergeKGs {
     println("10 objects  \n")
     objectsWithId.take(10).foreach(println(_))
 
-    (subjectsWithId, predicates, objectsWithId)
+     (subjectsWithId, predicates ,objectsWithId)
   }
 
   def getMatrixEntityValue(unionEntityIDs: RDD[(String, Long)], id: Long): String = {
@@ -55,10 +84,7 @@ class MergeKGs {
     //unionEntityIDs.take(5).foreach(println(_))
     //unionRelationIDs.take(5).foreach(println(_))
 
-    var unionEntityIDsInString = unionEntityIDs.map(line => (line._1, line._2)) //map to convert it to string!!
-    println("unionEntityIDsInString  \n")
-    unionEntityIDsInString.take(10).foreach(println(_))
-
+    var unionEntityIDsInString = unionEntityIDs.map(line => (line._1, line._2))
 
     //var triples = unifiedTriplesRDD.zipWithIndex()
     var triples2 = unifiedTriplesRDD.map(line =>
@@ -89,16 +115,34 @@ class MergeKGs {
     new CoordinateMatrix(entries, numRows, numCols)
   }
 
-  // def matchPredicatesByWordNet(unionRelationIDs : RDD[(String, Long)]): RDD[(String, Long ,String, Long)] ={
-  // take last section of uri strings
-  // apply a wordnet measurement on all pairs
-  // replace those that are equal
 
-  //unionRelationIDs.map(line => line._2 )
 
-  // def prunePredicateURI(predicateURI : String) : String = {
-  //   val predicate = predicateURI.split("/").lastOption.toString.toLowerCase
+  def matchPredicatesByWordNet(unionRelationIDs : RDD[(String, Long)]): RDD[(String, Long, String, Long)] = {
+    // take last section of uri strings
+    // apply a WordNet measurement on all pairs
+    // replace those that are equal
 
-  // d   predicate
-  //}
+   // var editedPredica
+   // tes = unionRelationIDs.map(line => (line._1.split("/").last.toLowerCase,
+     // line._2, line._1, line._2))
+    val similarityHandler = new SimilarityHandler(0.7)
+
+    var editedPredicates = unionRelationIDs.map(line => (line._1.split("/").last.toLowerCase, line._2))
+
+
+    val predicateBC =  cs.broadcast(editedPredicates.collect())
+    val similarPairsRdd = editedPredicates.flatMap(x =>
+      predicateBC.value.filter(y => similarityHandler.arePredicatesEqual(x._1,y._1))
+        .map(y => (x,y)))
+    similarPairsRdd.take(10).foreach(println(_))
+
+
+    val similarPairsRddTest = editedPredicates.map(line => (line._1, line._2, line._1, line._2))
+
+  similarPairsRddTest
+  }
+
+  val pruneURI = (uri : String) => uri.split("/").last.toLowerCase
+
+
 }

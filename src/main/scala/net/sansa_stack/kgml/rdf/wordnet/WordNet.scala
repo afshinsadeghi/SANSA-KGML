@@ -44,7 +44,7 @@ object WordNet {
 
   def apply()              : WordNet = new WordNet(classOf[WordNet].getResourceAsStream("/wnconfig.xml"))
 }
-class WordNet(wnConfig: InputStream) {
+class WordNet(wnConfig: InputStream)  extends java.io.Serializable {
 
   JWNL.initialize(wnConfig)
   val dict            = Dictionary.getInstance()
