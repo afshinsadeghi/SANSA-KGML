@@ -18,7 +18,7 @@ class SimilarityHandler(initialThreshold: Double) {
 
     val string1AsVerb = wn.synset(string1, POS.VERB, 1)
     val string2AsVerb = wn.synset(string2, POS.VERB, 1)
-
+    //7 similarity measures
     val verbPathSimilarity = wn.pathSimilarity(string1AsVerb, string2AsVerb)
     val verbLchSimilarity = wn.lchSimilarity(string1AsVerb, string2AsVerb)
     val verbWupSimilarity = wn.wupSimilarity(string1AsVerb, string2AsVerb)
@@ -40,15 +40,30 @@ class SimilarityHandler(initialThreshold: Double) {
     val string1AsNoun = wn.synset(string1, POS.NOUN, 1)
     val string2AsNoun = wn.synset(string2, POS.NOUN, 1)
     val nounPathSimilarity = wn.pathSimilarity(string1AsNoun, string2AsNoun)
-    val nounLchSimilarity = wn.lchSimilarity(string1AsNoun, string2AsNoun)
-    val nounWupSimilarity = wn.wupSimilarity(string1AsNoun, string2AsNoun)
-    val nounResSimilarity = wn.resSimilarity(string1AsNoun, string2AsNoun)
-    val nounJcnSimilarity = wn.jcnSimilarity(string1AsNoun, string2AsNoun)
-    val nounLinSimilarity = wn.linSimilarity(string1AsNoun, string2AsNoun)
-    val nounLeskSimilarity = wn.leskSimilarity(string1AsNoun, string2AsNoun)
+    println("nounPathSimilarity = "+nounPathSimilarity)
 
-    val nounMeanSim = (nounPathSimilarity + nounLchSimilarity + nounWupSimilarity + nounResSimilarity + nounJcnSimilarity
-      + nounLinSimilarity + nounLeskSimilarity) / 7
+    var nounMeanSim = 0.0
+    if (nounPathSimilarity.equals(1.0)){
+      println("These two predicates are the same")
+      nounMeanSim = 1.0
+    }
+    else {
+      val nounLchSimilarity = wn.lchSimilarity(string1AsNoun, string2AsNoun)
+      println("nounLchSimilarity = "+nounLchSimilarity)
+      //println((nounLchSimilarity * 100).round / 100.toDouble)
+      val nounWupSimilarity = wn.wupSimilarity(string1AsNoun, string2AsNoun)
+      println("nounWupSimilarity = "+nounWupSimilarity)
+      val nounResSimilarity = wn.resSimilarity(string1AsNoun, string2AsNoun)
+      println("nounResSimilarity = "+nounResSimilarity)
+      val nounJcnSimilarity = wn.jcnSimilarity(string1AsNoun, string2AsNoun)
+      println("nounJcnSimilarity = "+nounJcnSimilarity)
+      val nounLinSimilarity = wn.linSimilarity(string1AsNoun, string2AsNoun)
+      println("nounLinSimilarity = "+nounLinSimilarity)
+      val nounLeskSimilarity = wn.leskSimilarity(string1AsNoun, string2AsNoun)
+      println("nounLeskSimilarity = "+nounLeskSimilarity)
+      nounMeanSim = (nounPathSimilarity + nounLchSimilarity + nounWupSimilarity + nounResSimilarity + nounJcnSimilarity
+        + nounLinSimilarity + nounLeskSimilarity) / 7
+    }
     nounMeanSim
   }
 
