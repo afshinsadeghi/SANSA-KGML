@@ -158,7 +158,7 @@ object Main {
     println("first predicate "+ predicatesWithoutURIs2.first())
     //println("first predicate "+ predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(1))
 
-    //Getting similarity between predicates
+    //############################ Getting similarity between predicates ####################################
     val wn = WordNet()
     val s:SimilarityHandler = new SimilarityHandler(10)
     //val sim = s.getMeanWordNetNounSimilarity(predicatesWithoutURIs1.take(predicatesWithoutURIs1.count().toInt).apply(0),predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(4))
@@ -173,22 +173,26 @@ object Main {
       println(getPOStag(predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(4)))
     }catch {case e: Exception => println("Not found, exception caught: " + e)}
 
-
-
-    //verb or noun
     //println(wn.synsets("hit").map(line => line.getPOS).distinct.last.getLabel)
-    //we should separate verb and noun predicates
-    //verb predicates in first KG
 
+//To do
+    //separate verb and noun predicates
     //if(wn.synsets("hit").map(line => line.getPOS).distinct.last.getLabel.equals("noun")){
 
     //}
+
+
+
     //val p:RDD[String]=null
 
     /*
     var i:Int = 0
     //val rdd = ( i <- 0 to 5).map(x => getPOStag(predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(i)).reduce(_ union _)
-    /*if you want to pass the loop index to the helper function, you can do something like this : val rdd = (1 to n).zipWithIndex.map{ case (x, index) => helperFunction(i) }.reduce(_ union _) Of course, in this case it is not necessary as we have an integer incrementing collection but you can replace (1 to n) by any collection */
+    /*if you want to pass the loop index to the helper function, you can do something like this : val rdd = (1 to n).zipWithIndex
+    .map{ case (x, index) => helperFunction(i) }.reduce(_ union _)
+     */
+    Of course, in this case it is not necessary as we have an integer incrementing collection but you can replace (1 to n) by any collection */
+
     var j:Int = 0
     val p:RDD
     for( i <- 0 to 5){
