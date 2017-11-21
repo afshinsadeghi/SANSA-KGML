@@ -7,7 +7,7 @@ import net.sansa_stack.kgml.rdf.wordnet.{Synset, WordNet}
 /**
   * Created by afshin on 26.10.17.
   */
-class SimilarityHandler(initialThreshold: Double) extends java.io.Serializable {
+class SimilarityHandler(initialThreshold: Double) {
 
   private var threshold = initialThreshold
 
