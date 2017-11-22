@@ -127,12 +127,12 @@ object Main {
 
 
     //this.printGraphInfo(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
-    var merg = new MergeKGs()
+    //var merg = new MergeKGs()
 
-    var cm = merg.createCoordinateMatrix(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
+   // var cm = merg.createCoordinateMatrix(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
 
-    println("matrix rows:" + cm.numRows() + "\n")
-    println("matrix cols:" + cm.numCols() + "\n")
+    //println("matrix rows:" + cm.numRows() + "\n")
+    //println("matrix cols:" + cm.numCols() + "\n")
 
     //find their similarity, subjects and predicates1. example> barak obama in different KBs
     // find similarites between URI of the same things in differnet  languages  of dbpeida
@@ -147,18 +147,27 @@ object Main {
 
 
     //Getting the predicates without URIs
-    val predicatesWithoutURIs1 = triplesRDD1.map(_.getPredicate.getLocalName).distinct()
+    val predicatesWithoutURIs1 = triplesRDD1.map(_.getPredicate.getLocalName).distinct()//.zipWithIndex()
     println("Predicates without URI in KG1 are "+ predicatesWithoutURIs1.count()) //313
     predicatesWithoutURIs1.distinct().take(5).foreach(println)
     println("first predicate "+ predicatesWithoutURIs1.take(predicatesWithoutURIs1.count().toInt).apply(0))
 
-    val predicatesWithoutURIs2 = triplesRDD2.map(_.getPredicate.getLocalName).distinct()
+    val predicatesWithoutURIs2 = triplesRDD2.map(_.getPredicate.getLocalName).distinct()//.zipWithIndex()
     println("Predicates without URI in KG2 are "+ predicatesWithoutURIs2.count()) //81
     predicatesWithoutURIs2.distinct().take(5).foreach(println)
     println("first predicate "+ predicatesWithoutURIs2.first())
     //println("first predicate "+ predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(1))
 
+
+
     //############################ Getting similarity between predicates ####################################
+    println("//############################ Getting similarity between predicates ####################################")
+    val  preSim = new PredicatesSimilarity(sparkSession.sparkContext)
+    preSim.matchPredicatesByWordNet(predicatesWithoutURIs1,predicatesWithoutURIs2)
+
+
+
+
     val wn = WordNet()
     val s:SimilarityHandler = new SimilarityHandler(10)
     //val sim = s.getMeanWordNetNounSimilarity(predicatesWithoutURIs1.take(predicatesWithoutURIs1.count().toInt).apply(0),predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(4))
@@ -169,9 +178,9 @@ object Main {
     //println(wn.synsets("dog"))
     //println(wn.synsets(predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(0))
     //  .map(line => line.getPOS).distinct.last.getLabel) //get POS noun
-    try{
-      println(getPOStag(predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(4)))
-    }catch {case e: Exception => println("Not found, exception caught: " + e)}
+    //try{
+    //  println(getPOStag(predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(4)))
+    //}catch {case e: Exception => println("Not found, exception caught: " + e)}
 
     //println(wn.synsets("hit").map(line => line.getPOS).distinct.last.getLabel)
 
@@ -192,7 +201,7 @@ object Main {
     .map{ case (x, index) => helperFunction(i) }.reduce(_ union _)
      */
     Of course, in this case it is not necessary as we have an integer incrementing collection but you can replace (1 to n) by any collection */
-
+/*
     var j:Int = 0
     val p:RDD
     for( i <- 0 to 5){
