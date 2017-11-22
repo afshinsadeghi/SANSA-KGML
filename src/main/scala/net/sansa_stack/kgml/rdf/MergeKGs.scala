@@ -30,6 +30,12 @@ import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
  class MergeKGs(cs : SparkContext,triplesRDD : RDD[org.apache.jena.graph.Triple], triplesRDD2 : RDD[Triple] ) {
 
 
+  /**
+    * A function to print out information related to a merged KG
+    * @param unifiedTriplesRDD
+    * @param unionEntityIDs
+    * @param unionRelationIDs
+    */
   def printGraphInfo(unifiedTriplesRDD: RDD[graph.Triple], unionEntityIDs: RDD[(String, Long)],
                      unionRelationIDs: RDD[(String, Long)]): Unit = {
     def numEntities = unionEntityIDs.count()
@@ -48,6 +54,14 @@ import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
     unifiedTriplesRDD.take(10).foreach(println(_))
   }
 
+  /**
+    * Creates a model of two KGs into an 6 column array , subjects(in string) With Id(Long), predicates and
+    * objects(string )With Id(Long)
+    * @param unifiedTriplesRDD
+    * @param unionEntityIDs
+    * @param unionRelationIDs
+    * @return
+    */
     def create3ColumnModel(unifiedTriplesRDD: RDD[graph.Triple], unionEntityIDs: RDD[(String, Long)],
                          unionRelationIDs: RDD[(String, Long)]): (RDD[(Node, Long)], RDD[(Node, Long)], RDD[(Node, Long)]) = {
 
@@ -66,7 +80,7 @@ import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
     println("10 objects  \n")
     objectsWithId.take(10).foreach(println(_))
 
-     (subjectsWithId, predicates ,objectsWithId)
+     (subjectsWithId, predicates , objectsWithId)
   }
 
   def getMatrixEntityValue(unionEntityIDs: RDD[(String, Long)], id: Long): String = {
@@ -75,9 +89,16 @@ import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
     unionEntityIDs.filter(line => line._2 == id).first()._1
   }
 
-  //put two graphs into an 6 column array , 3 String that are a triple and 3 integer that are array index and id relation
-  //make two functions for 1: map urI to id, and 2: map id to URI
-  // assuming having this two functions, we make matrix of ids
+  /**
+    * Creates a model of two KGs into an 6 column array , 3 String that are a triple and 3 integer that
+    * are array index and id relation make two functions for
+    * 1: map urI to id, and
+    * 2: map id to URI assuming having this two functions, we make matrix of ids
+    * @param unifiedTriplesRDD
+    * @param unionEntityIDs
+    * @param unionRelationIDs
+    * @return
+    */
   def createCoordinateMatrixModel(unifiedTriplesRDD: RDD[graph.Triple], unionEntityIDs: RDD[(String, Long)],
                                   unionRelationIDs: RDD[(String, Long)]): RDD[(String, String, String, Long, Long, Long)] = {
 
@@ -103,8 +124,16 @@ import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
     sextuple
   }
 
-  //make two functions for 1: map urI to id, and 2: map id to URI
-  // assuming having this two functions, we make matrix of ids
+  /**
+    * Creates a matrix OF IDS from unfied triples of two KGs
+    * To use this this matrix functions are needed
+    *  1: map urI to id, and 2: map id to URI
+    *
+    * @param unifiedTriplesRDD
+    * @param unionEntityIDs
+    * @param unionRelationIDs
+    * @return
+    */
   def createCoordinateMatrix(unifiedTriplesRDD: RDD[graph.Triple], unionEntityIDs: RDD[(String, Long)],
                              unionRelationIDs: RDD[(String, Long)]): CoordinateMatrix = {
 
@@ -116,7 +145,11 @@ import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
   }
 
 
-
+  /**
+    *
+    * @param unionRelationIDs
+    * @return
+    */
   def matchPredicatesByWordNet(unionRelationIDs : RDD[(String, Long)]): RDD[(String, Long, String, Long)] = {
     // take last section of uri strings
     // apply a WordNet measurement on all pairs
