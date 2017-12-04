@@ -36,8 +36,7 @@ class PredicatesSimilarity(sc : SparkContext) {
     similarPairsRddTest
   }*/
 //compare two RDD of string and return a new RDD with the two string and the similarity value RDD[string,string,value]
-  //def matchPredicatesByWordNet(Predicates1 : RDD[(String, Long)], Predicates2 : RDD[(String, Long)]) = {
-  def matchPredicatesByWordNet(Predicates1 : RDD[(String)], Predicates2 : RDD[(String)]) = {
+  def matchPredicatesByWordNet(Predicates1 : RDD[(String)], Predicates2 : RDD[(String)])/*: Array[(String, String, Double)]*/ = {
     println("first 5 predicates in KG1 ")
     Predicates1.distinct().take(5).foreach(println)
     //println("first predicate "+ Predicates1.take(Predicates1.count().toInt).apply(0))
@@ -57,14 +56,26 @@ class PredicatesSimilarity(sc : SparkContext) {
     println("Number of predicates in second KG " + pairsPredicates2.count()) //81
     pairsPredicates2.take(10).foreach(println(_))*/
 
-    val JoindPredicates = (Predicates1.cartesian(Predicates2)).collect()
-    JoindPredicates.take(10).foreach(println(_))
-    println("Number of predicates after join " + JoindPredicates.length) //25353
+    //val JoindPredicates = (Predicates1.cartesian(Predicates2)).collect()
 
-    val similarPairsRdd = JoindPredicates.map(x => (x._1, x._2, similarityHandler.getMeanWordNetNounSimilarity(x._1, x._2)))
+    val JoindPredicates = (Predicates1.cartesian(Predicates2))
+    JoindPredicates.take(10).foreach(println(_))
+    println("Number of predicates after join " + JoindPredicates.count()) //25353
+    //val s = JoindPredicates.map(x => similarityHandler.getMeanWordNetNounSimilarity(x._1, x._2))
+    //s.take(10).foreach(println(_))
+
+    //val similarPairsRdd: RDD[(String, String, Double)] = JoindPredicates.map(x => (x._1, x._2, similarityHandler.getMeanWordNetNounSimilarity(x._1, x._2)))
+    val similarPairsRdd = JoindPredicates.collect().map(x => (x._1, x._2, similarityHandler.getMeanWordNetNounSimilarity(x._1, x._2)))
+  //val similarPairsRdd: RDD[(String, String, Double)] = JoindStrings.map(x => (x._1, x._2, getSimilarity(x._1, x._2)))
+    println("Similarity between predicates = ")
     similarPairsRdd.take(10).foreach(println(_))
 
+  //get predicates with similarity > 0.8
+    val samePredicates = similarPairsRdd.filter(x => x._3 >= 0.5)
+    println("Predicates with similarity > 0.1 are: "+ samePredicates.length) //104
+    samePredicates.take(samePredicates.length).foreach(println(_))
 
+    //similarPairsRdd
   }
 
 }
