@@ -44,7 +44,9 @@ class PredicatesSimilarity(sc : SparkContext) {
     Predicates2.distinct().take(5).foreach(println)
     //println("Second predicate "+ Predicates2.first())
     //println("first predicate "+ predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(1))
-    val similarityHandler = new SimilarityHandler(0.7)
+
+    val similarityThreshold = 0.9
+    val similarityHandler = new SimilarityHandler(similarityThreshold)
 
     println("##########")
 
@@ -65,14 +67,14 @@ class PredicatesSimilarity(sc : SparkContext) {
     //s.take(10).foreach(println(_))
 
     //val similarPairsRdd: RDD[(String, String, Double)] = JoindPredicates.map(x => (x._1, x._2, similarityHandler.getMeanWordNetNounSimilarity(x._1, x._2)))
-    val similarPairsRdd = JoindPredicates.collect().map(x => (x._1, x._2, similarityHandler.getMeanWordNetNounSimilarity(x._1, x._2)))
+    val similarPairsRdd = JoindPredicates.collect().map(x => (x._1, x._2, similarityHandler.getPredicateSimilarity(x._1, x._2)))
   //val similarPairsRdd: RDD[(String, String, Double)] = JoindStrings.map(x => (x._1, x._2, getSimilarity(x._1, x._2)))
     println("Similarity between predicates = ")
     similarPairsRdd.take(10).foreach(println(_))
 
   //get predicates with similarity > 0.8
-    val samePredicates = similarPairsRdd.filter(x => x._3 >= 0.5)
-    println("Predicates with similarity > 0.1 are: "+ samePredicates.length) //104
+    val samePredicates = similarPairsRdd.filter(x => x._3 >= similarityThreshold)
+    println("Predicates with similarity > 0.9 are: "+ samePredicates.length) //104
     samePredicates.take(samePredicates.length).foreach(println(_))
 
     //similarPairsRdd
