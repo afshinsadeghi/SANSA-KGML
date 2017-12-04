@@ -45,13 +45,6 @@ object Main {
       .appName("Triple reader example (" + input1 + ")")
       .getOrCreate()
 
-
-
-//    val spark = SparkSession.builder()
-//      .config("spark.kryo.registrator", "net.sansa_stack.owl.spark.dataset.UnmodifiableCollectionKryoRegistrator")
-//      .appName("ManchesterSyntaxOWLAxiomsDatasetBuilderTest").master("local[*]").getOrCreate()
-
-
     val triplesRDD1 = NTripleReader.load(sparkSession, URI.create(input1))
     val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input2))
 
