@@ -45,6 +45,13 @@ object Main {
       .appName("Triple reader example (" + input1 + ")")
       .getOrCreate()
 
+
+
+//    val spark = SparkSession.builder()
+//      .config("spark.kryo.registrator", "net.sansa_stack.owl.spark.dataset.UnmodifiableCollectionKryoRegistrator")
+//      .appName("ManchesterSyntaxOWLAxiomsDatasetBuilderTest").master("local[*]").getOrCreate()
+
+
     val triplesRDD1 = NTripleReader.load(sparkSession, URI.create(input1))
     val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input2))
 
@@ -164,61 +171,20 @@ object Main {
     println("//############################ Getting similarity between predicates ####################################")
     val  preSim = new PredicatesSimilarity(sparkSession.sparkContext)
     preSim.matchPredicatesByWordNet(predicatesWithoutURIs1,predicatesWithoutURIs2)
+    //val writerPredicateSimilarity = new PrintWriter(new File("src/main/resources/Predicates_Similarity.nt" ))
+    //predicate1Count.collect().sortBy(f=> f._2  * -1 ).foreach(x=>{writer1.write(x.toString()+ "\n")})
+    //writer1.close()
 
 
 
 
-    val wn = WordNet()
-    val s:SimilarityHandler = new SimilarityHandler(10)
-    //val sim = s.getMeanWordNetNounSimilarity(predicatesWithoutURIs1.take(predicatesWithoutURIs1.count().toInt).apply(0),predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(4))
-    val sim = s.getMeanWordNetNounSimilarity("dog","hit")
-    //val sim = s.getMeanWordNetNounSimilarity("imagesize","containerfor") //not work because of it has more than one word
-    println("Mean WordNet Noun Similarity = " + sim)
-    //println(POS.getPOSForLabel("dog"))
-    //println(wn.synsets("dog"))
-    //println(wn.synsets(predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(0))
-    //  .map(line => line.getPOS).distinct.last.getLabel) //get POS noun
-    //try{
-    //  println(getPOStag(predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(4)))
-    //}catch {case e: Exception => println("Not found, exception caught: " + e)}
-
-    //println(wn.synsets("hit").map(line => line.getPOS).distinct.last.getLabel)
-
-//To do
-    //separate verb and noun predicates
-    //if(wn.synsets("hit").map(line => line.getPOS).distinct.last.getLabel.equals("noun")){
-
-    //}
-
-
-
-    //val p:RDD[String]=null
-
-    /*
-    var i:Int = 0
-    //val rdd = ( i <- 0 to 5).map(x => getPOStag(predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(i)).reduce(_ union _)
-    /*if you want to pass the loop index to the helper function, you can do something like this : val rdd = (1 to n).zipWithIndex
-    .map{ case (x, index) => helperFunction(i) }.reduce(_ union _)
-     */
-    Of course, in this case it is not necessary as we have an integer incrementing collection but you can replace (1 to n) by any collection */
-/*
-    var j:Int = 0
-    val p:RDD
-    for( i <- 0 to 5){
-      try
-        {
-          p  = sparkSession.sparkContext.parallelize(getPOStag(predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(i)))
-        }catch {case e: Exception => println("Not found, exception caught: " + e)}
-
-
-    }
-    */
-
-
-    // for loop execution with i range
-    /*for( i <- 1 to predicatesWithoutURIs1.count(); b <- 1 to predicatesWithoutURIs2.count()){
-      val sim = s.getMeanWordNetNounSimilarity("dog","cat")
-    }*/
+//    val wn = WordNet()
+//    val s:SimilarityHandler = new SimilarityHandler(10)
+//    //val sim = s.getMeanWordNetNounSimilarity("roof","ceiling") //lesk similarity = 0 and it should be = 7
+//    //val sim = s.getMeanWordNetNounSimilarity("periapsis","studio") //lesk = 0 and it should be = 4
+//    //val sim = s.getMeanWordNetNounSimilarity("discoverer","composer") //lesk = 0 and it should be = 216
+//    val sim = s.getMeanWordNetNounSimilarity("studio","studio")
+//    println("Mean WordNet Noun Similarity = " + sim)
 
     sparkSession.stop
 
