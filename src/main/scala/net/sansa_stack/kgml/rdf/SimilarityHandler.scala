@@ -37,39 +37,32 @@ class SimilarityHandler(initialThreshold: Double) {
   //
   def getMeanWordNetNounSimilarity(string1: String, string2: String): Double = {
     var nounMeanSim = 0.0
-    try
-      {
-        val string1AsNoun = wn.synset(string1, POS.NOUN, 1)
-        val string2AsNoun = wn.synset(string2, POS.NOUN, 1)
-        val nounPathSimilarity = wn.pathSimilarity(string1AsNoun, string2AsNoun)
-        //println("nounPathSimilarity = "+nounPathSimilarity)
+    if (string1.toLowerCase == string2.toLowerCase) return 1.0
+    try {
+      val string1AsNoun = wn.synset(string1, POS.NOUN, 1)
+      val string2AsNoun = wn.synset(string2, POS.NOUN, 1)
+      val nounPathSimilarity = wn.pathSimilarity(string1AsNoun, string2AsNoun)
+      // println("nounPathSimilarity = "+nounPathSimilarity)
+      val nounLchSimilarity = wn.lchSimilarity(string1AsNoun, string2AsNoun) / 3.689
+      // println("nounLchSimilarity = "+nounLchSimilarity)
+      // println((nounLchSimilarity * 100).round / 100.toDouble)
+      val nounWupSimilarity = wn.wupSimilarity(string1AsNoun, string2AsNoun)
+      //println("nounWupSimilarity = " + nounWupSimilarity)
+      val nounResSimilarity = wn.resSimilarity(string1AsNoun, string2AsNoun)/ 7.75
+      // println("nounResSimilarity = " + nounResSimilarity)
+      val nounJcnSimilarity = wn.jcnSimilarity(string1AsNoun, string2AsNoun)/ 12876699.6
+      // println("nounJcnSimilarity = " + nounJcnSimilarity)
+      val nounLinSimilarity = wn.linSimilarity(string1AsNoun, string2AsNoun)
+      // println("nounLinSimilarity = " + nounLinSimilarity)
+      val nounLeskSimilarity = wn.leskSimilarity(string1AsNoun, string2AsNoun) /  21.0
+      // println("nounLeskSimilarity = " + nounLeskSimilarity)
+      nounMeanSim = (nounPathSimilarity + nounLchSimilarity + nounWupSimilarity + nounResSimilarity + nounJcnSimilarity
+        + nounLinSimilarity + nounLeskSimilarity) / 7
 
-
-        if (nounPathSimilarity.equals(1.0)){
-          //println("These two predicates are the same")
-          nounMeanSim = 1.0
-        }
-        else {
-          val nounLchSimilarity = wn.lchSimilarity(string1AsNoun, string2AsNoun)
-          //println("nounLchSimilarity = "+nounLchSimilarity)
-          //println((nounLchSimilarity * 100).round / 100.toDouble)
-          val nounWupSimilarity = wn.wupSimilarity(string1AsNoun, string2AsNoun)
-          //println("nounWupSimilarity = "+nounWupSimilarity)
-          val nounResSimilarity = wn.resSimilarity(string1AsNoun, string2AsNoun)
-          //println("nounResSimilarity = "+nounResSimilarity)
-          val nounJcnSimilarity = wn.jcnSimilarity(string1AsNoun, string2AsNoun)
-          //println("nounJcnSimilarity = "+nounJcnSimilarity)
-          val nounLinSimilarity = wn.linSimilarity(string1AsNoun, string2AsNoun)
-          //println("nounLinSimilarity = "+nounLinSimilarity)
-          val nounLeskSimilarity = wn.leskSimilarity(string1AsNoun, string2AsNoun)
-          //println("nounLeskSimilarity = "+nounLeskSimilarity)
-          nounMeanSim = (nounPathSimilarity + nounLchSimilarity + nounWupSimilarity + nounResSimilarity + nounJcnSimilarity
-            + nounLinSimilarity + nounLeskSimilarity) / 7
-        }
-
-
-      }
-    catch {case e: Exception => nounMeanSim = 0.0}
+    }
+    catch {
+      case e: Exception => nounMeanSim = 0.0
+    }
 
 
     nounMeanSim
