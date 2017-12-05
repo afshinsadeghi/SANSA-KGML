@@ -10,6 +10,11 @@ import net.sansa_stack.kgml.rdf.wordnet.{Synset, WordNet}
 class SimilarityHandler(initialThreshold: Double) {
 
   private var threshold = initialThreshold
+  var maxLch = 3.6888794541139363
+  var maxRes = 6.7959465490685735
+  var maxJcn = 1.2876699500047589E7
+  var maxLesk = 7
+
 
   val wn = WordNet()
 
@@ -33,52 +38,27 @@ class SimilarityHandler(initialThreshold: Double) {
     meanSim
   }
 
-  def getMeanWordNetVerbSimilarity(string1: String, string2: String): Double = {
-    var verbMeanSim = 0.0
-    try{
-      val string1AsVerb = wn.synset(string1, POS.VERB, 1)
-      val string2AsVerb = wn.synset(string2, POS.VERB, 1)
-      //7 similarity measures
-      val verbPathSimilarity = wn.pathSimilarity(string1AsVerb, string2AsVerb)
-      val verbLchSimilarity = wn.lchSimilarity(string1AsVerb, string2AsVerb)
-      val verbWupSimilarity = wn.wupSimilarity(string1AsVerb, string2AsVerb)
-      val verbResSimilarity = wn.resSimilarity(string1AsVerb, string2AsVerb)
-      val verbJcnSimilarity = wn.jcnSimilarity(string1AsVerb, string2AsVerb)
-      val verbLinSimilarity = wn.linSimilarity(string1AsVerb, string2AsVerb)
-      val verbLeskSimilarity = wn.leskSimilarity(string1AsVerb, string2AsVerb)
-
-       verbMeanSim = (verbPathSimilarity + verbLchSimilarity + verbWupSimilarity + verbResSimilarity + verbJcnSimilarity
-        + verbLinSimilarity + verbLeskSimilarity) / 7
-
-    }catch {
-      case e: Exception => verbMeanSim = 0.0
-    }
-    verbMeanSim
-  }
-
-  //
   def getMeanWordNetNounSimilarity(string1: String, string2: String): Double = {
     var nounMeanSim = 0.0
     try {
       val string1AsNoun = wn.synset(string1, POS.NOUN, 1)
       val string2AsNoun = wn.synset(string2, POS.NOUN, 1)
       val nounPathSimilarity = wn.pathSimilarity(string1AsNoun, string2AsNoun)
-      // println("nounPathSimilarity = "+nounPathSimilarity)
-      val nounLchSimilarity = wn.lchSimilarity(string1AsNoun, string2AsNoun) / 3.689
-      //println("nounLchSimilarity = "+nounLchSimilarity)
-      //println((nounLchSimilarity * 100).round / 100.toDouble)
+      val nounLchSimilarity = wn.lchSimilarity(string1AsNoun, string2AsNoun) / maxLch
       val nounWupSimilarity = wn.wupSimilarity(string1AsNoun, string2AsNoun)
-      //println("nounWupSimilarity = " + nounWupSimilarity)
-      val nounResSimilarity = wn.resSimilarity(string1AsNoun, string2AsNoun) / 7.75
-      //println("nounResSimilarity = " + nounResSimilarity)
-      val nounJcnSimilarity = wn.jcnSimilarity(string1AsNoun, string2AsNoun) / 12876699.6
-      //println("nounJcnSimilarity = " + nounJcnSimilarity)
+      val nounResSimilarity = wn.resSimilarity(string1AsNoun, string2AsNoun) / maxRes
+      val nounJcnSimilarity = wn.jcnSimilarity(string1AsNoun, string2AsNoun) / maxJcn
       val nounLinSimilarity = wn.linSimilarity(string1AsNoun, string2AsNoun)
-      //println("nounLinSimilarity = " + nounLinSimilarity)
-      val nounLeskSimilarity = wn.leskSimilarity(string1AsNoun, string2AsNoun) / 8
-      //println("nounLeskSimilarity = " + nounLeskSimilarity)
+      val nounLeskSimilarity = wn.leskSimilarity(string1AsNoun, string2AsNoun) / maxLesk
       nounMeanSim = (nounPathSimilarity + nounLchSimilarity + nounWupSimilarity + nounResSimilarity + nounJcnSimilarity
         + nounLinSimilarity + nounLeskSimilarity) / 7
+//      println("nounPathSimilarity = "+nounPathSimilarity)
+//      println("nounLchSimilarity = "+nounLchSimilarity)
+//      println("nounWupSimilarity = " + nounWupSimilarity)
+//      println("nounResSimilarity = " + nounResSimilarity)
+//      println("nounJcnSimilarity = " + nounJcnSimilarity)
+//      println("nounLinSimilarity = " + nounLinSimilarity)
+//      println("nounLeskSimilarity = " + nounLeskSimilarity)
 
     }
     catch {
@@ -87,6 +67,29 @@ class SimilarityHandler(initialThreshold: Double) {
 
 
     nounMeanSim
+  }
+
+  def getMeanWordNetVerbSimilarity(string1: String, string2: String): Double = {
+    var verbMeanSim = 0.0
+    try{
+      val string1AsVerb = wn.synset(string1, POS.VERB, 1)
+      val string2AsVerb = wn.synset(string2, POS.VERB, 1)
+      //7 similarity measures
+      val verbPathSimilarity = wn.pathSimilarity(string1AsVerb, string2AsVerb)
+      val verbLchSimilarity = wn.lchSimilarity(string1AsVerb, string2AsVerb) / maxLch
+      val verbWupSimilarity = wn.wupSimilarity(string1AsVerb, string2AsVerb)
+      val verbResSimilarity = wn.resSimilarity(string1AsVerb, string2AsVerb) / maxRes
+      val verbJcnSimilarity = wn.jcnSimilarity(string1AsVerb, string2AsVerb) / maxJcn
+      val verbLinSimilarity = wn.linSimilarity(string1AsVerb, string2AsVerb)
+      val verbLeskSimilarity = wn.leskSimilarity(string1AsVerb, string2AsVerb) / maxLesk
+
+      verbMeanSim = (verbPathSimilarity + verbLchSimilarity + verbWupSimilarity + verbResSimilarity + verbJcnSimilarity
+        + verbLinSimilarity + verbLeskSimilarity) / 7
+
+    }catch {
+      case e: Exception => verbMeanSim = 0.0
+    }
+    verbMeanSim
   }
 
   def arePredicatesEqual(string1: String, string2: String): Boolean = {
