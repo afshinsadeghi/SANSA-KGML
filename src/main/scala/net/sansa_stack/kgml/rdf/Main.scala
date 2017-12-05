@@ -173,10 +173,10 @@ object Main {
 
 //    val wn = WordNet()
 //    val s:SimilarityHandler = new SimilarityHandler(10)
-//    //val sim = s.getMeanWordNetNounSimilarity("roof","ceiling") //lesk similarity = 0 and it should be = 7
-//    //val sim = s.getMeanWordNetNounSimilarity("periapsis","studio") //lesk = 0 and it should be = 4
-//    //val sim = s.getMeanWordNetNounSimilarity("discoverer","composer") //lesk = 0 and it should be = 216
-//    val sim = s.getMeanWordNetNounSimilarity("studio","studio")
+////    //val sim = s.getPredicateSimilarity("roof","ceiling") //lesk similarity = 0 and it should be = 7
+////    //val sim = s.getPredicateSimilarity("periapsis","studio") //lesk = 0 and it should be = 4
+////    //val sim = s.getPredicateSimilarity("discoverer","composer") //lesk = 0 and it should be = 216
+//    val sim = s.getMeanWordNetNounSimilarity("type","genre")
 //    println("Mean WordNet Noun Similarity = " + sim)
 
     sparkSession.stop
