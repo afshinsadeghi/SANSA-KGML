@@ -20,7 +20,7 @@
 // "http://wordnetcode.princeton.edu/3.0/WordNet-3.0.tar.gz"
 package net.sansa_stack.kgml.rdf.wordnet
 
-import java.io.{File, FileInputStream, InputStream}
+import java.io.{File, FileInputStream, InputStream, Serializable}
 
 import edu.cmu.lti.jawjaw.util.WordNetUtil
 import edu.cmu.lti.lexical_db.NictWordNet
@@ -44,7 +44,8 @@ object WordNet {
 
   def apply()              : WordNet = new WordNet(classOf[WordNet].getResourceAsStream("/wnconfig.xml"))
 }
-class WordNet(wnConfig: InputStream)  extends java.io.Serializable {
+
+class WordNet(wnConfig: InputStream)  extends Serializable {
 
   JWNL.initialize(wnConfig)
   val dict            = Dictionary.getInstance()

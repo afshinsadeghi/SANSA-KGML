@@ -42,8 +42,14 @@ object Main {
     val sparkSession = SparkSession.builder
       .master("local[*]")
       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+      .config("spark.kryoserializer.buffer.max", "512")
+      .config("spark.kryo.registrator", "net.sansa_stack.kgml.rdf.Registrator")
       .appName("Triple reader example (" + input1 + ")")
       .getOrCreate()
+
+//    val sparkSession = SparkSession.builder()
+//      .config("spark.kryo.registrator", "net.sansa_stack.owl.spark.dataset.UnmodifiableCollectionKryoRegistrator")
+//      .appName("ManchesterSyntaxOWLAxiomsDatasetBuilderTest").master("local[*]").getOrCreate()
 
     val triplesRDD1 = NTripleReader.load(sparkSession, URI.create(input1))
     val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input2))
@@ -170,13 +176,13 @@ object Main {
 
 
 
-
+//
 //    val wn = WordNet()
 //    val s:SimilarityHandler = new SimilarityHandler(10)
 ////    //val sim = s.getPredicateSimilarity("roof","ceiling") //lesk similarity = 0 and it should be = 7
 ////    //val sim = s.getPredicateSimilarity("periapsis","studio") //lesk = 0 and it should be = 4
 ////    //val sim = s.getPredicateSimilarity("discoverer","composer") //lesk = 0 and it should be = 216
-//    val sim = s.getMeanWordNetNounSimilarity("type","genre")
+//    val sim = s.getPredicateSimilarity("chairman","director")
 //    println("Mean WordNet Noun Similarity = " + sim)
 
     sparkSession.stop
