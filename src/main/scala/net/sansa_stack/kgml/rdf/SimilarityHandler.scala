@@ -7,13 +7,15 @@ import net.sansa_stack.kgml.rdf.wordnet.{Synset, WordNet}
 /**
   * Created by afshin on 26.10.17.
   */
-class SimilarityHandler(initialThreshold: Double) {
+class SimilarityHandler(initialThreshold: Double) extends Serializable{
 
   private var threshold = initialThreshold
   var maxLch = 3.6888794541139363
-  var maxRes = 6.7959465490685735
+  //var maxRes = 6.7959465490685735
+  var maxRes = 8.993171126404793
   var maxJcn = 1.2876699500047589E7
-  var maxLesk = 7
+  //var maxLesk = 7
+  var maxLesk = 10
 
 
   val wn = WordNet()
@@ -35,6 +37,7 @@ class SimilarityHandler(initialThreshold: Double) {
   def getMeanWordNetVerbOrNounSimilarity(string1: String, string2: String): Double = {
 
     val meanSim = max(this.getMeanWordNetNounSimilarity(string1, string2), this.getMeanWordNetVerbSimilarity(string1, string2))
+
     meanSim
   }
 
@@ -65,8 +68,7 @@ class SimilarityHandler(initialThreshold: Double) {
       case e: Exception => nounMeanSim = 0.0
     }
 
-
-    nounMeanSim
+    (nounMeanSim * 100).round / 100.toDouble
   }
 
   def getMeanWordNetVerbSimilarity(string1: String, string2: String): Double = {
@@ -89,7 +91,7 @@ class SimilarityHandler(initialThreshold: Double) {
     }catch {
       case e: Exception => verbMeanSim = 0.0
     }
-    verbMeanSim
+    (verbMeanSim * 100).round / 100.toDouble
   }
 
   def arePredicatesEqual(string1: String, string2: String): Boolean = {
