@@ -33,6 +33,25 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
     similarity
   }
 
+  def getLiteralSimilarity(string1: String, string2: String): Double = {
+
+    val string1l = this.removeSpecialChars(string1) // literals in difference KGs may be in double quotes etc.
+    val string2l = this.removeSpecialChars(string2)
+
+    var similarity = 0.0
+    if (string1l.toLowerCase == string2l.toLowerCase)
+    { // This is for phrases that has exactly same sequence of words
+
+      similarity = 1.0
+    } else {
+
+      similarity = getMeanWordNetNounSimilarity(string1l, string2l)
+    }
+
+    similarity
+
+  }
+
   // predicates can be a verb or a noun
   def getMeanWordNetVerbOrNounSimilarity(string1: String, string2: String): Double = {
 
@@ -107,4 +126,11 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
   }
 
   def getThreshold: Double = threshold
+
+  def removeSpecialChars(string1: String): String = {
+    val string2 = string1.replaceAll("""([\p{Punct}&&[^.]]|\b\p{IsLetter}{1,2}\b)\s*""", "")
+  string2
+  }
+
+
 }
