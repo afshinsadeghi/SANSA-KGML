@@ -170,23 +170,28 @@ object Main {
     println("//############################ Getting similarity between predicates ####################################")
     val  preSim = new PredicatesSimilarity(sparkSession.sparkContext)
     preSim.matchPredicatesByWordNet(predicatesWithoutURIs1,predicatesWithoutURIs2)
+
     //val writerPredicateSimilarity = new PrintWriter(new File("src/main/resources/Predicates_Similarity.nt" ))
     //predicate1Count.collect().sortBy(f=> f._2  * -1 ).foreach(x=>{writer1.write(x.toString()+ "\n")})
     //writer1.close()
 
+   println("//############################ Getting similarity between objects ####################################")
 
+    val objects1 = triplesRDD1.map(_.getObject.getLiteralValue.toString).distinct()
+    val objects2 = triplesRDD2.map(_.getObject.getLiteralValue.toString).distinct()
 
-//
+    val  entSim = new EntitiesSimilarity(sparkSession.sparkContext)
+    entSim.matchEntitiesByWordNet(objects1,objects2)
+
 //    val wn = WordNet()
 //    val s:SimilarityHandler = new SimilarityHandler(10)
-////    //val sim = s.getPredicateSimilarity("roof","ceiling") //lesk similarity = 0 and it should be = 7
-////    //val sim = s.getPredicateSimilarity("periapsis","studio") //lesk = 0 and it should be = 4
-////    //val sim = s.getPredicateSimilarity("discoverer","composer") //lesk = 0 and it should be = 216
-//    val sim = s.getPredicateSimilarity("chairman","director")
+//    //val sim = s.getMeanWordNetNounSimilarity("roof","ceiling") //lesk similarity = 0 and it should be = 7
+//    //val sim = s.getMeanWordNetNounSimilarity("periapsis","studio") //lesk = 0 and it should be = 4
+//    //val sim = s.getMeanWordNetNounSimilarity("discoverer","composer") //lesk = 0 and it should be = 216
+//    val sim = s.getMeanWordNetNounSimilarity("studio","studio")
 //    println("Mean WordNet Noun Similarity = " + sim)
 
     sparkSession.stop
-
   }
   def getPOStag(word: String): String = {
     val wn = WordNet()
