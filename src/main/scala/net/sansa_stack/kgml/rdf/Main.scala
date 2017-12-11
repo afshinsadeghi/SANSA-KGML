@@ -169,20 +169,26 @@ object Main {
     //############################ Getting similarity between predicates ####################################
     println("//############################ Getting similarity between predicates ####################################")
     val  preSim = new PredicatesSimilarity(sparkSession.sparkContext)
-    preSim.matchPredicatesByWordNet(predicatesWithoutURIs1,predicatesWithoutURIs2)
-
-    //val writerPredicateSimilarity = new PrintWriter(new File("src/main/resources/Predicates_Similarity.nt" ))
-    //predicate1Count.collect().sortBy(f=> f._2  * -1 ).foreach(x=>{writer1.write(x.toString()+ "\n")})
-    //writer1.close()
+    val similarPredicates = preSim.matchPredicatesByWordNet(predicatesWithoutURIs1,predicatesWithoutURIs2)
+    val s:SimilarityHandler = new SimilarityHandler(0.8)
+    val compresionRatio = s.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.length)
+    println("Compression Ration = "+ compresionRatio)
 
    println("//############################ Getting similarity between objects ####################################")
 
-    val objects1 = triplesRDD1.map(_.getObject.getLiteralValue.toString).distinct()
-    val objects2 = triplesRDD2.map(_.getObject.getLiteralValue.toString).distinct()
+//    val objects1 = triplesRDD1.map(_.getObject.getLiteralValue.toString).distinct()
+//    val objects2 = triplesRDD2.map(_.getObject.getLiteralValue.toString).distinct()
+//
+//    val  entSim = new EntitiesSimilarity(sparkSession.sparkContext)
+//    entSim.matchEntitiesByWordNet(objects1,objects2)
+    println("//############################ Getting similarity between Subjects ####################################")
 
-    val  entSim = new EntitiesSimilarity(sparkSession.sparkContext)
-    entSim.matchEntitiesByWordNet(objects1,objects2)
+    //val subjects1 = triplesRDD1.map(_.getSubject.getLocalName).distinct()
+    //subjects1.take(10).foreach(println)
 
+
+
+    //Testing Wordnet
 //    val wn = WordNet()
 //    val s:SimilarityHandler = new SimilarityHandler(10)
 //    //val sim = s.getMeanWordNetNounSimilarity("roof","ceiling") //lesk similarity = 0 and it should be = 7
