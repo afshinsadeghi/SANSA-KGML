@@ -170,8 +170,8 @@ object Main {
     println("//############################ Getting similarity between predicates ####################################")
     val  preSim = new PredicatesSimilarity(sparkSession.sparkContext)
     val similarPredicates = preSim.matchPredicatesByWordNet(predicatesWithoutURIs1,predicatesWithoutURIs2)
-    val s:SimilarityHandler = new SimilarityHandler(0.8)
-    val compresionRatio = s.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.length)
+    val eval:Evaluation = new Evaluation()
+    val compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.length)
     println("Compression Ration = "+ compresionRatio +"%")
 
    println("//############################ Getting similarity between objects ####################################")
