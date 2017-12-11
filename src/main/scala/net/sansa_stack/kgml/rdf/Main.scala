@@ -172,7 +172,7 @@ object Main {
     val similarPredicates = preSim.matchPredicatesByWordNet(predicatesWithoutURIs1,predicatesWithoutURIs2)
     val s:SimilarityHandler = new SimilarityHandler(0.8)
     val compresionRatio = s.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.length)
-    println("Compression Ration = "+ compresionRatio)
+    println("Compression Ration = "+ compresionRatio +"%")
 
    println("//############################ Getting similarity between objects ####################################")
 
