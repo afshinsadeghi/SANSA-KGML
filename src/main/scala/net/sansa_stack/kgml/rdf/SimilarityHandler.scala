@@ -132,13 +132,4 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
   string2
   }
 
-  def compressionRatio(totalNumber: Double, numberAfterGetSimilarity: Double): Double = {
-    //println(totalNumber+" "+numberAfterGetSimilarity)
-
-    val comR = (totalNumber - numberAfterGetSimilarity) / totalNumber*100
-
-    (comR * 100).round / 100.toDouble
-  }
-
-
 }
