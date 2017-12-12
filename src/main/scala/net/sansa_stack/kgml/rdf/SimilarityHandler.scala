@@ -132,4 +132,32 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
   string2
   }
 
+  def jaccardSimilarity(intersectionCount : Double, num1 : Double, num2 : Double) : Double = {
+    val union = num1 + num2 - intersectionCount
+    intersectionCount / union
+  }
+
+  def splitCamelCase(s: String): Array[String] = {
+    return s.replaceAll(
+      String.format("%s|%s|%s",
+        "(?<=[A-Z])(?=[A-Z][a-z])",
+        "(?<=[^A-Z])(?=[A-Z])",
+        "(?<=[A-Za-z])(?=[^A-Za-z])"
+      ),
+      " "
+    ).replaceAll("  ", " ").split(" ")
+  }
+
+
+  def jaccardPredicateSimilarityWithWordNet( string1 : String, string2 : String ) : Double = {
+
+    val array1 = this.splitCamelCase(string1)
+    val array2 = this.splitCamelCase(string2)
+    var intersectionCount = 0
+    for (x <- array1; y <- array2){
+      if (this.arePredicatesEqual(x,y)) { intersectionCount =  intersectionCount + 1}
+    }
+    this.jaccardSimilarity(intersectionCount, array1.length, array2.length)
+  }
+
 }
