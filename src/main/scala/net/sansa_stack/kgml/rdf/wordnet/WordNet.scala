@@ -1,17 +1,12 @@
 /*
- *  ScalaWordNet
  *
- *  Copyright (c) 2013-2015 Sujit Pal.
- *  Copyright (c) 2015 Hanns Holger Rutz.
- *  All rights reserved.
+ *  WordNet for Scala and Spark
  *
- *	This software is free software; you can redistribute it and/or
- *	modify it under the terms of the GNU General Public License v2+.
+ *  Afshin Sadeghi
  */
 
 // based on original source: https://github.com/sujitpal/scalcium
-// - removed all senseless option arguments
-// - move package from `com.mycompany.scalcium.wordnet` to `de.sciss.wordnet`
+// - Made the package serializable
 
 
 // make sure the wordnet datasets are downloaded:
@@ -26,7 +21,6 @@ import edu.cmu.lti.jawjaw.util.WordNetUtil
 import edu.cmu.lti.lexical_db.NictWordNet
 import edu.cmu.lti.lexical_db.data.Concept
 import edu.cmu.lti.ws4j.RelatednessCalculator
-import edu.cmu.lti.ws4j.impl.{JiangConrath, LeacockChodorow, Lesk, Lin, Path, Resnik, WuPalmer}
 import net.didion.jwnl.JWNL
 import net.didion.jwnl.data.list.{PointerTargetNode, PointerTargetNodeList}
 import net.didion.jwnl.data.{IndexWord, PointerType, PointerUtils, Word}
@@ -38,29 +32,57 @@ import scala.collection.mutable.ArrayBuffer
 
 
 object WordNet {
-  def apply(wnConfig: File): WordNet = new WordNet(new FileInputStream(wnConfig))
-  import scala.io.Source
 
 
-  def apply()              : WordNet = new WordNet(classOf[WordNet].getResourceAsStream("/wnconfig.xml"))
+  val currentDirectory = new java.io.File(".").getCanonicalPath
+
+  val wnConfig: InputStream = new FileInputStream(currentDirectory + "/config/wnconfig.xml")
+  JWNL.initialize(wnConfig)
+  val dict = Dictionary.getInstance()
+  val lexdb = new NictWordNet()
+
+  def Path_Similarity() = {
+    val Path_Similarity = new edu.cmu.lti.ws4j.impl.Path(lexdb)
+    Path_Similarity
+  }
+
+  def LCH_Similarity() = {
+    val LCH_Similarity = new edu.cmu.lti.ws4j.impl.LeacockChodorow(lexdb)
+    LCH_Similarity
+  }
+
+  def WUP_Similarity() = {
+    val WUP_Similarity = new edu.cmu.lti.ws4j.impl.WuPalmer(lexdb)
+    WUP_Similarity
+  }
+
+  def RES_Similarity() = {
+    val RES_Similarity = new edu.cmu.lti.ws4j.impl.Resnik(lexdb)
+    RES_Similarity
+  }
+
+  def LIN_Similarity() ={
+    val LIN_Similarity = new edu.cmu.lti.ws4j.impl.Lin(lexdb)
+    LIN_Similarity
+  }
+
+  def Lesk_Similarity() = {
+    val Lesk_Similarity = new edu.cmu.lti.ws4j.impl.Lesk(lexdb)
+    Lesk_Similarity
+  }
+
+  def JCN_Similarity() = {
+    val JCN_Similarity = new edu.cmu.lti.ws4j.impl.JiangConrath(lexdb)
+    JCN_Similarity
+  }
+
 }
 
-class WordNet(wnConfig: InputStream)  extends Serializable {
 
-  JWNL.initialize(wnConfig)
-  val dict            = Dictionary.getInstance()
-
-  val lexdb           = new NictWordNet()
-  val Path_Similarity = new Path            (lexdb)
-  val LCH_Similarity  = new LeacockChodorow (lexdb)
-  val WUP_Similarity  = new WuPalmer        (lexdb)
-  val RES_Similarity  = new Resnik          (lexdb)
-  val JCN_Similarity  = new JiangConrath    (lexdb)
-  val LIN_Similarity  = new Lin             (lexdb)
-  val Lesk_Similarity = new Lesk            (lexdb)
+class WordNet extends Serializable() {
 
   def allSynsets(pos: POS): Stream[Synset] =
-    dict.getIndexWordIterator(pos)
+    WordNet.dict.getIndexWordIterator(pos)
       .flatMap(iword => iword.asInstanceOf[IndexWord].getSenses)
       .toStream
 
@@ -69,13 +91,13 @@ class WordNet(wnConfig: InputStream)  extends Serializable {
       .flatMap(pos => synsets(lemma, pos.asInstanceOf[POS]))(breakOut)
 
   def synsets(lemma: String, pos: POS): List[Synset] = {
-    val iword = dict.getIndexWord(pos, lemma)
+    val iword = WordNet.dict.getIndexWord(pos, lemma)
     if (iword == null) List.empty[Synset]
     else iword.getSenses.toList
   }
 
   def getSynset(lemma: String, pos: POS, sid: Int): Option[Synset] = {
-    val iword = dict.getIndexWord(pos, lemma)
+    val iword = WordNet.dict.getIndexWord(pos, lemma)
     if (iword != null) Some(iword.getSense(sid))
     else None
   }
@@ -112,17 +134,22 @@ class WordNet(wnConfig: InputStream)  extends Serializable {
 
   ////////////////// similarities /////////////////////
 
-  def pathSimilarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, Path_Similarity)
-  def lchSimilarity (left: Synset, right: Synset): Double = getPathSimilarity(left, right, LCH_Similarity )
-  def wupSimilarity (left: Synset, right: Synset): Double = getPathSimilarity(left, right, WUP_Similarity )
+  def pathSimilarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, WordNet.Path_Similarity)
+
+  def lchSimilarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, WordNet.LCH_Similarity)
+
+  def wupSimilarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, WordNet.WUP_Similarity)
 
   // WS4j Information Content Finder (ICFinder) uses
   // SEMCOR, Resnik, JCN and Lin similarities are with
   // the SEMCOR corpus.
-  def resSimilarity (left: Synset, right: Synset): Double = getPathSimilarity(left, right, RES_Similarity )
-  def jcnSimilarity (left: Synset, right: Synset): Double = getPathSimilarity(left, right, JCN_Similarity )
-  def linSimilarity (left: Synset, right: Synset): Double = getPathSimilarity(left, right, LIN_Similarity )
-  def leskSimilarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, Lesk_Similarity)
+  def resSimilarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, WordNet.RES_Similarity)
+
+  def jcnSimilarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, WordNet.JCN_Similarity)
+
+  def linSimilarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, WordNet.LIN_Similarity)
+
+  def leskSimilarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, WordNet.Lesk_Similarity)
 
   def getPathSimilarity(left: Synset, right: Synset,
                         sim: RelatednessCalculator): Double = {
@@ -130,50 +157,50 @@ class WordNet(wnConfig: InputStream)  extends Serializable {
       lConcept <- getWS4jConcept(left)
       rConcept <- getWS4jConcept(right)
     } yield sim.calcRelatednessOfSynset(lConcept, rConcept).getScore
-    
+
     opt.getOrElse(0.0)
   }
 
   def getWS4jConcept(ss: Synset): Option[Concept] = {
-    val pos     = edu.cmu.lti.jawjaw.pobj.POS.valueOf(ss.getPOS.getKey)
+    val pos = edu.cmu.lti.jawjaw.pobj.POS.valueOf(ss.getPOS.getKey)
     val synsets = WordNetUtil.wordToSynsets(ss.getWord(0).getLemma, pos)
     synsets.headOption.map(synset => new Concept(synset.getSynset, pos))
   }
 
-//  /** NOTE: this is currently wrong. The returned
-//    * path is always of length 1 and seems to correspond
-//    * to the least-common hypernym.
-//    * Looks like `getAllPaths` is wrong in WS4j.
-//    */
-//  def shortestPath(left: Synset, right: Synset): List[Synset] = {
-//    val pf = new PathFinder(lexdb)
-//    val listOpt = for {
-//      c1 <- getWS4jConcept(left )
-//      c2 <- getWS4jConcept(right)
-//    } yield {
-//      pf.getShortestPaths(c1, c2, null).toList
-//    }
-//    val list = listOpt.getOrElse(Nil)
-//    // now map back from WS4j to JWNL
-//    list.map { sub =>
-//      val ssn = sub.subsumer.getSynset
-//      val ss  = SynsetDAO.findSynsetBySynset(ssn)
-//      val n   = ss.getName
-//      val p   = ss.getPos match {
-//        case edu.cmu.lti.jawjaw.pobj.POS.a => POS.ADJECTIVE
-//        case edu.cmu.lti.jawjaw.pobj.POS.r => POS.ADVERB
-//        case edu.cmu.lti.jawjaw.pobj.POS.n => POS.NOUN
-//        case edu.cmu.lti.jawjaw.pobj.POS.v => POS.VERB
-//      }
-//      // println(s"name = '$n', pos = $p")
-//      synsets(n, p).head
-//    }
-//  }
+  //  /** NOTE: this is currently wrong. The returned
+  //    * path is always of length 1 and seems to correspond
+  //    * to the least-common hypernym.
+  //    * Looks like `getAllPaths` is wrong in WS4j.
+  //    */
+  //  def shortestPath(left: Synset, right: Synset): List[Synset] = {
+  //    val pf = new PathFinder(lexdb)
+  //    val listOpt = for {
+  //      c1 <- getWS4jConcept(left )
+  //      c2 <- getWS4jConcept(right)
+  //    } yield {
+  //      pf.getShortestPaths(c1, c2, null).toList
+  //    }
+  //    val list = listOpt.getOrElse(Nil)
+  //    // now map back from WS4j to JWNL
+  //    list.map { sub =>
+  //      val ssn = sub.subsumer.getSynset
+  //      val ss  = SynsetDAO.findSynsetBySynset(ssn)
+  //      val n   = ss.getName
+  //      val p   = ss.getPos match {
+  //        case edu.cmu.lti.jawjaw.pobj.POS.a => POS.ADJECTIVE
+  //        case edu.cmu.lti.jawjaw.pobj.POS.r => POS.ADVERB
+  //        case edu.cmu.lti.jawjaw.pobj.POS.n => POS.NOUN
+  //        case edu.cmu.lti.jawjaw.pobj.POS.v => POS.VERB
+  //      }
+  //      // println(s"name = '$n', pos = $p")
+  //      synsets(n, p).head
+  //    }
+  //  }
 
   ////////////////// Morphy ///////////////////////////
 
   def morphy(s: String, pos: POS): String = {
-    val mp = dict.getMorphologicalProcessor
+    val mp = WordNet.dict.getMorphologicalProcessor
     val bf = mp.lookupBaseForm(pos, s)
     if (bf == null) "" else bf.getLemma
   }
@@ -202,18 +229,26 @@ class WordNet(wnConfig: InputStream)  extends Serializable {
     g.split(";")
       .collect {
         case s if isQuoted(s.trim()) => s.trim()
-      } (breakOut)
+      }(breakOut)
   }
 
-  def hyponyms          (ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.HYPONYM           )
-  def hypernyms         (ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.HYPERNYM          )
-  def partMeronyms      (ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.PART_MERONYM      )
-  def partHolonyms      (ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.PART_HOLONYM      )
-  def substanceMeronyms (ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.SUBSTANCE_MERONYM )
-  def substanceHolonyms (ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.SUBSTANCE_HOLONYM )
-  def memberHolonyms    (ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.MEMBER_HOLONYM    )
-  def entailments       (ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.ENTAILMENT        )
-  def entailedBy        (ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.ENTAILED_BY       )
+  def hyponyms(ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.HYPONYM)
+
+  def hypernyms(ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.HYPERNYM)
+
+  def partMeronyms(ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.PART_MERONYM)
+
+  def partHolonyms(ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.PART_HOLONYM)
+
+  def substanceMeronyms(ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.SUBSTANCE_MERONYM)
+
+  def substanceHolonyms(ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.SUBSTANCE_HOLONYM)
+
+  def memberHolonyms(ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.MEMBER_HOLONYM)
+
+  def entailments(ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.ENTAILMENT)
+
+  def entailedBy(ss: Synset): List[Synset] = relatedSynsets(ss, PointerType.ENTAILED_BY)
 
   def relatedSynsets(ss: Synset, ptr: PointerType): List[Synset] =
     ss.getPointers(ptr).map(ptr => ptr.getTarget.asInstanceOf[Synset])(breakOut)
@@ -231,17 +266,17 @@ class WordNet(wnConfig: InputStream)  extends Serializable {
       .map(hp => hp.reverse.head).distinct
 
   def lowestCommonHypernym(left: Synset, right: Synset): Option[Synset] = {
-    val lPaths  = hypernymPaths(left)
-    val rPaths  = hypernymPaths(right)
+    val lPaths = hypernymPaths(left)
+    val rPaths = hypernymPaths(right)
     lch(lPaths, rPaths)
   }
 
   private[this] def lch(lPaths: List[List[Synset]], rPaths: List[List[Synset]]): Option[Synset] = {
-    val pairs   = for (lPath <- lPaths; rPath <- rPaths) yield (lPath, rPath)
-    val lchs    = ArrayBuffer[(Synset,Int)]()
+    val pairs = for (lPath <- lPaths; rPath <- rPaths) yield (lPath, rPath)
+    val lchs = ArrayBuffer[(Synset, Int)]()
     pairs.map { case (lPath, rPath) =>
-      val lSet    = lPath.toSet // Set(p1).flatten
-      val matched = rPath.zipWithIndex.filter { case (s, i) => lSet.contains(s) }
+      val lSet = lPath.toSet // Set(p1).flatten
+    val matched = rPath.zipWithIndex.filter { case (s, i) => lSet.contains(s) }
       if (matched.nonEmpty) lchs += matched.head
     }
     if (lchs.isEmpty) None else Some(lchs.minBy(_._2)._1)
@@ -249,15 +284,15 @@ class WordNet(wnConfig: InputStream)  extends Serializable {
 
   /** Note: this does not follow up on sister terms or hypoterms */
   def shortestHypernymPath(left: Synset, right: Synset): Option[(List[Synset], List[Synset])] = {
-    val lPaths  = hypernymPaths(left )
-    val rPaths  = hypernymPaths(right)
+    val lPaths = hypernymPaths(left)
+    val rPaths = hypernymPaths(right)
     lch(lPaths, rPaths).map { common =>
-      val lPathsF   = lPaths.filter(_.contains(common))
-      val rPathsF   = rPaths.filter(_.contains(common))
-      val minLeft   = lPathsF.minBy(_.indexOf(common))
-      val minRight  = rPathsF.minBy(_.indexOf(common))
-      val l         = minLeft .take(minLeft .indexOf(common) + 1)
-      val r         = minRight.take(minRight.indexOf(common) + 1)
+      val lPathsF = lPaths.filter(_.contains(common))
+      val rPathsF = rPaths.filter(_.contains(common))
+      val minLeft = lPathsF.minBy(_.indexOf(common))
+      val minRight = rPathsF.minBy(_.indexOf(common))
+      val l = minLeft.take(minLeft.indexOf(common) + 1)
+      val r = minRight.take(minRight.indexOf(common) + 1)
       (l, r)
     }
   }
@@ -282,7 +317,7 @@ class WordNet(wnConfig: InputStream)  extends Serializable {
     w.getPointers(ptr)
       .map(ptr => ptr.getTarget.asInstanceOf[Word])(breakOut)
 
-  def format(w : Word): String =
+  def format(w: Word): String =
     List(w.getSynset.getWord(0).getLemma,
       w.getPOS.getKey,
       (w.getIndex + 1).formatted("%02d"),

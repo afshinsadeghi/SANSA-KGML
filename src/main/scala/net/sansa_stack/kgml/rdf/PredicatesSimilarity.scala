@@ -14,7 +14,8 @@ import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
 
 class PredicatesSimilarity(sc : SparkContext) extends Serializable{
 //compare two RDD of string and return a new RDD with the two string and the similarity value RDD[string,string,value]
-  def matchPredicatesByWordNet(Predicates1 : RDD[(String)], Predicates2 : RDD[(String)]): Array[(String, String, Double)] = {
+  def matchPredicatesByWordNet(Predicates1 : RDD[(String)], Predicates2 : RDD[(String)]):
+  RDD[(String, String, Double)] = {
    println("Number of predicates in KG1 "+ Predicates1.count())
     println("Number of predicates in KG2 "+ Predicates2.count())
     //Predicates1.distinct().take(5).foreach(println)
@@ -37,7 +38,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
     println("Number of predicates in second KG " + pairsPredicates2.count()) //81
     pairsPredicates2.take(10).foreach(println(_))*/
 
-    val JoindPredicates: RDD[(String,String)] = (Predicates1.cartesian(Predicates2))
+    val JoindPredicates: RDD[(String,String)] = Predicates1.cartesian(Predicates2)
     //JoindPredicates.take(10).foreach(println(_))
     println("Number of paird predicates after join " + JoindPredicates.count()) //25353
 
@@ -54,17 +55,19 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
 
 
 
-
-    val similarPairsRdd = JoindPredicates.collect().map(x => (x._1, x._2, similarityHandler.
+    val similarPairsRdd = JoindPredicates.map(x => (x._1, x._2, similarityHandler.
       jaccardPredicateSimilarityWithWordNet(x._1, x._2)))
+
+   // val similarPairsRdd = JoindPredicates.collect().map(x => (x._1, x._2, similarityHandler.
+   //   jaccardPredicateSimilarityWithWordNet(x._1, x._2)))
     //println("Similarity between paird predicates = ")
     //similarPairsRdd.take(10).foreach(println(_))
 
 
   //get predicates with similarity >= 0.5
    val samePredicates = similarPairsRdd.filter(x => x._3 >= similarityThreshold)
-    println("Predicates with similarity >= "+ similarityThreshold + " are: "+ samePredicates.length) //64
-//    samePredicates.take(samePredicates.length).foreach(println(_))
+    println("Predicates with similarity >= "+ similarityThreshold + " are: "+ samePredicates.count()) //64
+//    samePredicates.take(samePredicates.length).foreach(println(_)) //prints all the predicates
 
    samePredicates
   }

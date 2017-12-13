@@ -1,11 +1,12 @@
-package net.sansa_stack.kgml.rdf.wordnet
+package net.sansa_stack.kgml.rdf
 
 /**
   * Created by afshin on 12.10.17.
   */
 import net.didion.jwnl.data.POS
+import net.sansa_stack.kgml.rdf.wordnet.WordNet
 
-object SimilarityTests {
+object TestWordNetSimilarityMeasures {
   def main(args: Array[String]) = {
     Console.println(">>> dog = wn.synset('dog.n.01')")
     Console.println(">>> cat = wn.synset('cat.n.01')")
@@ -14,7 +15,7 @@ object SimilarityTests {
     Console.println(">>> car = wn.synset('car.n.01')")
     Console.println(">>> bus = wn.synset('bus.n.01')")
 
-    val wn = WordNet()
+    val wn =  new WordNet
 
     val dog = wn.synset("dog", POS.NOUN, 1)
     val cat = wn.synset("cat", POS.NOUN, 1)
