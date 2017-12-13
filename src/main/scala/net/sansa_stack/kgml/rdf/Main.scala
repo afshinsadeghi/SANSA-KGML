@@ -171,7 +171,7 @@ object Main {
     val  preSim = new PredicatesSimilarity(sparkSession.sparkContext)
     val similarPredicates = preSim.matchPredicatesByWordNet(predicatesWithoutURIs1,predicatesWithoutURIs2)
     val eval:Evaluation = new Evaluation()
-    val compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.length)
+    val compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.count())
     println("Compression Ration = "+ compresionRatio +"%")
 
    println("//############################ Getting similarity between objects ####################################")
@@ -199,11 +199,11 @@ object Main {
 
     sparkSession.stop
   }
-  def getPOStag(word: String): String = {
-    val wn = WordNet()
-    val s = wn.synsets(word).map(line => line.getPOS).distinct.last.getLabel
-    s
-  }
+//  def getPOStag(word: String): String = {
+//    val wn = WordNet()
+//    val s = wn.synsets(word).map(line => line.getPOS).distinct.last.getLabel
+ //   s
+ // }
 
 
 }

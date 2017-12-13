@@ -18,7 +18,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
   var maxLesk = 10
 
 
-  val wn = WordNet()
+  val wn =  new WordNet()
 
   def getPredicateSimilarity(string1: String, string2: String): Double = {
     var similarity = 0.0

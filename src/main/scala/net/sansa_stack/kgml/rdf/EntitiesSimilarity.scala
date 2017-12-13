@@ -1,6 +1,5 @@
 package net.sansa_stack.kgml.rdf
 
-import net.sansa_stack.kgml.rdf.SimilarityHandler
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
