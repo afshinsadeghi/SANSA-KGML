@@ -20,9 +20,15 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
 
   val wn =  new WordNet()
 
+
+  def checkLowerCaseStringEqulity(string1: String, string2: String): Boolean = {
+
+    string1.toLowerCase == string2.toLowerCase
+  }
+
   def getPredicateSimilarity(string1: String, string2: String): Double = {
     var similarity = 0.0
-    if (string1.toLowerCase == string2.toLowerCase) { // This is for phrases that has exactly same sequence of words
+    if (this.checkLowerCaseStringEqulity(string1, string2)) { // This is for phrases that has exactly same sequence of words
 
       similarity = 1.0
     } else {
@@ -150,6 +156,8 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
 
 
   def jaccardPredicateSimilarityWithWordNet( string1 : String, string2 : String ) : Double = {
+
+    if(this.checkLowerCaseStringEqulity(string1, string2)) return 1.0
 
     val array1 = this.splitCamelCase(string1)
     val array2 = this.splitCamelCase(string2)

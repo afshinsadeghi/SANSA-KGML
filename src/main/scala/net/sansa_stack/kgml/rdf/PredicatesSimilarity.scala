@@ -54,7 +54,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
    // s.take(10).foreach(println(_))
 
 
-
+    JoindPredicates.cache()
     val similarPairsRdd = JoindPredicates.map(x => (x._1, x._2, similarityHandler.
       jaccardPredicateSimilarityWithWordNet(x._1, x._2)))
 

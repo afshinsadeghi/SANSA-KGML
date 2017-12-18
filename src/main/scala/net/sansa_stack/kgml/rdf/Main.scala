@@ -39,10 +39,13 @@ object Main {
     val input1 = "src/main/resources/dbpediaOnlyAppleobjects.nt"
     val input2 = "src/main/resources/yagoonlyAppleobjects.nt"
 
+    //val input1 = "src/main/resources/dbpedia.nt"
+    //val input2 = "src/main/resources/yago.nt"
+
     val sparkSession = SparkSession.builder
       .master("local[*]")
       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-      .config("spark.kryoserializer.buffer.max", "512")
+      .config("spark.kryoserializer.buffer.max", "1024")
       .config("spark.kryo.registrator", "net.sansa_stack.kgml.rdf.Registrator")
       .appName("Triple reader example (" + input1 + ")")
       .getOrCreate()
