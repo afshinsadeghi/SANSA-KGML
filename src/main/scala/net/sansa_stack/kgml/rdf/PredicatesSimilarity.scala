@@ -13,6 +13,7 @@ import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
 * */
 
 class PredicatesSimilarity(sc : SparkContext) extends Serializable{
+
 //compare two RDD of string and return a new RDD with the two string and the similarity value RDD[string,string,value]
   def matchPredicatesByWordNet(Predicates1 : RDD[(String)], Predicates2 : RDD[(String)]):
   Array[(String, String, Double)] = {
@@ -25,7 +26,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
     //println("Second predicate "+ Predicates2.first())
     //println("first predicate "+ predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(1))
 
-    val similarityThreshold = 0.8
+    val similarityThreshold = 0.5
     val similarityHandler = new SimilarityHandler(similarityThreshold)
 
     println("##########")
