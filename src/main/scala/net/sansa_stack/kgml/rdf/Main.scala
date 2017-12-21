@@ -179,12 +179,12 @@ object Main {
 
    println("//############################ Getting similarity between objects ####################################")
 
-//    val objects1 = triplesRDD1.map(_.getObject.getLiteralValue.toString).distinct()
-//    val objects2 = triplesRDD2.map(_.getObject.getLiteralValue.toString).distinct()
+   // val objects1 = triplesRDD1.map(_.getObject.getLiteralValue.toString).distinct()
+   // val objects2 = triplesRDD2.map(_.getObject.getLiteralValue.toString).distinct()
 //
-//    val  entSim = new EntitiesSimilarity(sparkSession.sparkContext)
-//    entSim.matchEntitiesByWordNet(objects1,objects2)
-    println("//############################ Getting similarity between Subjects ####################################")
+    //val  entSim = new EntitiesSimilarity(sparkSession.sparkContext)
+    //entSim.matchEntitiesByWordNet(objects1,objects2)
+    //println("//############################ Getting similarity between Subjects ####################################")
 
     //val subjects1 = triplesRDD1.map(_.getSubject.getLocalName).distinct()
     //subjects1.take(10).foreach(println)
