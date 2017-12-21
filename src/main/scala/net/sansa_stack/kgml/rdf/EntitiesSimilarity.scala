@@ -17,7 +17,7 @@ class EntitiesSimilarity(sc : SparkContext) {
 
     println("------------ First 5 Entities in KG2 -------------")
     Entities2.distinct().take(50).foreach(println)
-    val similarityThreshold = 0.9
+    val similarityThreshold = 0.5
     val similarityHandler = new SimilarityHandler(similarityThreshold)
 
     val JoindEntities = (Entities1.cartesian(Entities2))
@@ -30,7 +30,7 @@ class EntitiesSimilarity(sc : SparkContext) {
       map(x => (x._1, x._2, similarityHandler.getLiteralSimilarity(x._1, x._2)))
 
     val sameEntities = similarPairsRdd.filter(x => x._3 >= similarityThreshold)
-    println("Entities with similarity > 0.9 are: "+ sameEntities.length)
+    println("Entities with similarity >"+similarityThreshold +" are: "+ sameEntities.length)
 
     sameEntities.take(sameEntities.length).foreach(println(_))
 
