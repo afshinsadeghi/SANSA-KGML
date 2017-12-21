@@ -9,7 +9,7 @@ object TestJaccardSimilarity{
   def main(args: Array[String]): Unit = {
 
 
-    val similarityThreshold = 0.6
+    var similarityThreshold = 0.6
     val similarityHandler = new SimilarityHandler(similarityThreshold)
 
     var longPredicate1 = "isCenterOf"
@@ -26,6 +26,15 @@ object TestJaccardSimilarity{
     longPredicate2 = "Auto"
     sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1, longPredicate2)
     print("similarity of " + longPredicate1 + " and "    + longPredicate2 + " is " + sim + "\n" )
+
+
+    similarityThreshold = 0.6
+    similarityHandler.setThreshold(similarityThreshold)
+    longPredicate1 = "composer"
+    longPredicate2 = "musicComposer"
+    sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1, longPredicate2)
+    print("similarity of " + longPredicate1 + " and "    + longPredicate2 + " is " + sim + "\n" )
+
 
   }
 
