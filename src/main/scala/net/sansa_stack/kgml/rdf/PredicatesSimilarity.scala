@@ -26,7 +26,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
     //println("Second predicate "+ Predicates2.first())
     //println("first predicate "+ predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(1))
 
-    val similarityThreshold = 0.5
+    val similarityThreshold = 0.8
     val similarityHandler = new SimilarityHandler(similarityThreshold)
 
     println("##########")
