@@ -36,7 +36,7 @@ object Main {
 
   def main(args: Array[String]) = {
 
-    val input2 = "src/main/resources/dbpediamapping5k.nt"  //dbpedia-3-9-mappingbased_properties_en
+    val input2 = "src/main/resources/dbpediamapping20.nt"  //dbpedia-3-9-mappingbased_properties_en
     val input1 = "src/main/resources/yagofact20.nt"
 
  //   val input1 = "src/main/resources/yagofacts50k.nt"
@@ -52,7 +52,7 @@ object Main {
       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .config("spark.kryoserializer.buffer.max", "1024")
       .config("spark.kryo.registrator", "net.sansa_stack.kgml.rdf.Registrator")
-      .appName("Triple reader example (" + input1 + ")")
+      .appName("Triple merger of " + input1 + " and  " + input2 + " ")
       .getOrCreate()
 
 //    val sparkSession = SparkSession.builder()
@@ -64,10 +64,10 @@ object Main {
 
     //##################### Get graph specs ############################
     triplesRDD1.cache()
-    println("Number of triples in the first KG\n")   //dbpedia 2457
+    println("Number of triples in the first KG file "+ input1 + "\n")   //dbpedia 2457
     println(triplesRDD1.count().toString)
 
-    println("Number of triples in the second KG\n") //yago 738
+    println("Number of triples in the second KG "+ input2 + "\n") //yago 738
     println(triplesRDD2.count().toString)
 
 
@@ -177,9 +177,16 @@ object Main {
     //############################ Getting similarity between predicates ####################################
     println("//############################ Getting similarity between predicates ####################################")
     val  preSim = new PredicatesSimilarity(sparkSession.sparkContext)
+    //this creates array:
     val similarPredicates = preSim.matchPredicatesByWordNet(predicatesWithoutURIs1,predicatesWithoutURIs2)
+    //instead:
+    //val similarPredicates = preSim.matchPredicatesByWordNetRDD(predicatesWithoutURIs1,predicatesWithoutURIs2)
+
     val eval:Evaluation = new Evaluation()
+    // this works with array similarPredicates:
     var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.length)
+    // instead
+    //var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.count())
     println("Compression Ration in predicates merging = "+ compresionRatio +"%")
 
    println("//############################ Getting similarity between literal entities  ####################################")
@@ -188,11 +195,17 @@ object Main {
     val literalObjects2 = triplesRDD2.filter(_.getObject.isLiteral).map(_.getObject.getLiteralValue.toString).distinct()
 
     val  entSim = new EntitiesSimilarity(sparkSession.sparkContext)
+    //this creates array:
     val similarLiteralEntities = preSim.matchPredicatesByWordNet(literalObjects1, literalObjects2)
+    //instead:
+    //val similarLiteralEntities = preSim.matchPredicatesByWordNetRDD(literalObjects1, literalObjects2)
+
+    // this works with array similarLiteralEntities
     val compresionRatio2 = eval.compressionRatio(literalObjects1.count()+literalObjects2.count(), similarLiteralEntities.length)
+    //instead:
+    //val compresionRatio2 = eval.compressionRatio(literalObjects1.count()+literalObjects2.count(), similarLiteralEntities.count())
+
     println("Compression Ration in entity merging = "+ compresionRatio2 +"%")
-
-
 
     println("//############################ Getting similarity between non-literal (called source in jena definition) entities (Subjects and objects) ####################################")
  // exactly like predicates:
@@ -205,33 +218,20 @@ object Main {
     val entitiy2 = objects2 ++ subjects2
 
     val  subSim = new PredicatesSimilarity(sparkSession.sparkContext)
+    //this creates array:
     val similarEntities = subSim.matchPredicatesByWordNet(entitiy1,entitiy2)
+    //instead
+    //val similarEntities = subSim.matchPredicatesByWordNetRDD(entitiy1,entitiy2)
+
+    // this works with array of similarEntities
     compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.length)
+    //instead:
+    //compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.count())
+
+
     println("Compression Ration in predicates merging = "+ compresionRatio +"%")
-
-
-
-    //val subjects1 = triplesRDD1.map(_.getSubject.getLocalName).distinct()
-    //subjects1.take(10).foreach(println)
-
-
-
-    //Testing Wordnet
-//    val wn = WordNet()
-//    val s:SimilarityHandler = new SimilarityHandler(10)
-//    //val sim = s.getMeanWordNetNounSimilarity("roof","ceiling") //lesk similarity = 0 and it should be = 7
-//    //val sim = s.getMeanWordNetNounSimilarity("periapsis","studio") //lesk = 0 and it should be = 4
-//    //val sim = s.getMeanWordNetNounSimilarity("discoverer","composer") //lesk = 0 and it should be = 216
-//    val sim = s.getMeanWordNetNounSimilarity("studio","studio")
-//    println("Mean WordNet Noun Similarity = " + sim)
 
     sparkSession.stop
   }
-//  def getPOStag(word: String): String = {
-//    val wn = WordNet()
-//    val s = wn.synsets(word).map(line => line.getPOS).distinct.last.getLabel
- //   s
- // }
-
 
 }

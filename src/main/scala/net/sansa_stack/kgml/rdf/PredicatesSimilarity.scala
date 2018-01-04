@@ -15,10 +15,11 @@ import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
 class PredicatesSimilarity(sc : SparkContext) extends Serializable{
 
 //compare two RDD of string and return a new RDD with the two string and the similarity value RDD[string,string,value]
+  //output is array
   def matchPredicatesByWordNet(Predicates1 : RDD[(String)], Predicates2 : RDD[(String)]):
   Array[(String, String, Double)] = {
-   println("Number of predicates in KG1 "+ Predicates1.count())
-    println("Number of predicates in KG2 "+ Predicates2.count())
+   println("Number of inputs in KG1 "+ Predicates1.count())
+    println("Number of inputs in KG2 "+ Predicates2.count())
     //Predicates1.distinct().take(5).foreach(println)
     //println("first predicate "+ Predicates1.take(Predicates1.count().toInt).apply(0))
     //println("first 5 predicates in KG2 ")
@@ -29,7 +30,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
     val similarityThreshold = 0.8
     val similarityHandler = new SimilarityHandler(similarityThreshold)
 
-    println("##########")
+    println("##########\n")
 
     /*val pairsPredicates1 = Predicates1.zipWithIndex.map((x) =>(x._2, x._1))
     println("Number of predicates in first KG " + pairsPredicates1.count()) //313
@@ -41,9 +42,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
 
     val JoindPredicates: RDD[(String,String)] = Predicates1.cartesian(Predicates2)
     //JoindPredicates.take(10).foreach(println(_))
-    println("Number of paird predicates after join " + JoindPredicates.count()) //25353
-
-
+    println("Number of paired predicates after join " + JoindPredicates.count()) //25353
 
     //var s = new Array[Double](JoindPredicates.count().toInt)
 //    for( i <- 0 to (JoindPredicates.count()-1).toInt){
@@ -51,17 +50,16 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
 //        JoindPredicates.take(JoindPredicates.count().toInt).apply(i.toInt)._2)
 //    }
 
-
    // s.take(10).foreach(println(_))
 
 
-    JoindPredicates.cache()
+   // JoindPredicates.cache()
     val similarPairsRdd = JoindPredicates.collect.map(x => (x._1, x._2, similarityHandler.
       jaccardPredicateSimilarityWithWordNet(x._1, x._2)))
 
    // val similarPairsRdd = JoindPredicates.collect().map(x => (x._1, x._2, similarityHandler.
    //   jaccardPredicateSimilarityWithWordNet(x._1, x._2)))
-    //println("Similarity between paird predicates = ")
+    //println("Similarity between paired predicates = ")
     //similarPairsRdd.take(10).foreach(println(_))
 
 
@@ -75,4 +73,34 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
    samePredicates
   }
 
+
+  //compare two RDD of string and return a new RDD with the two string and the similarity value RDD[string,string,value]
+  //output is RDD
+  def matchPredicatesByWordNetRDD(Predicates1 : RDD[(String)], Predicates2 : RDD[(String)]):
+  RDD[(String, String, Double)] = {
+    println("Number of predicates in KG1 "+ Predicates1.count())
+    println("Number of predicates in KG2 "+ Predicates2.count())
+    val similarityThreshold = 0.8
+    val similarityHandler = new SimilarityHandler(similarityThreshold)
+
+    println("##########")
+    val JoindPredicates: RDD[(String,String)] = Predicates1.cartesian(Predicates2)
+    println("Number of paired predicates after join " + JoindPredicates.count()) //25353
+
+   val similarPairsRdd = JoindPredicates.map(x => (x._1, x._2, similarityHandler.
+    jaccardPredicateSimilarityWithWordNet(x._1, x._2)))
+
+    similarPairsRdd.cache()
+  //println("Similarity between paired predicates = ")
+  //similarPairsRdd.take(10).foreach(println(_))
+
+  val samePredicates = similarPairsRdd.filter(x => x._3 >= similarityThreshold)
+  // printing similar predicates with their similarity score
+    samePredicates.cache()
+    println("Predicates with similarity >= "+ similarityThreshold + " are: "+ samePredicates.count()) //64
+  //prints all the similar predicates
+  samePredicates.foreach(println(_))
+
+    samePredicates
+  }
 }
