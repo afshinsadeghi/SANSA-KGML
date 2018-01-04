@@ -36,8 +36,13 @@ object Main {
 
   def main(args: Array[String]) = {
 
-    val input1 = "src/main/resources/dbpediaOnlyAppleobjects.nt"
-    val input2 = "src/main/resources/yagoonlyAppleobjects.nt"
+    val input2 = "src/main/resources/dbpediamapping50k.nt"  //dbpedia-3-9-mappingbased_properties_en
+    val input1 = "src/main/resources/yagofact20.nt"
+
+ //   val input1 = "src/main/resources/yagofacts50k.nt"
+
+//    val input1 = "src/main/resources/dbpediaOnlyAppleobjects.nt"
+//    val input2 = "src/main/resources/yagoonlyAppleobjects.nt"
 
     //val input1 = "src/main/resources/dbpedia.nt"
     //val input2 = "src/main/resources/yago.nt"
