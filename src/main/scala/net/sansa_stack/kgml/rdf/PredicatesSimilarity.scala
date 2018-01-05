@@ -45,10 +45,10 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
     println("Number of paired predicates after join " + JoindPredicates.count()) //25353
 
     //var s = new Array[Double](JoindPredicates.count().toInt)
-//    for( i <- 0 to (JoindPredicates.count()-1).toInt){
-//      s(i.toInt) = similarityHandler.getPredicateSimilarity(JoindPredicates.take(JoindPredicates.count().toInt).apply(i.toInt)._1,
-//        JoindPredicates.take(JoindPredicates.count().toInt).apply(i.toInt)._2)
-//    }
+   // for( i <- 0 to (JoindPredicates.count()-1).toInt){
+   //   s(i.toInt) = similarityHandler.getPredicateSimilarity(JoindPredicates.take(JoindPredicates.count().toInt).apply(i.toInt)._1,
+   //     JoindPredicates.take(JoindPredicates.count().toInt).apply(i.toInt)._2)
+   // }
 
    // s.take(10).foreach(println(_))
 

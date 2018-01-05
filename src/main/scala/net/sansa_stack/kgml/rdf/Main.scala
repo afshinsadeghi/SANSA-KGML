@@ -36,13 +36,13 @@ object Main {
 
   def main(args: Array[String]) = {
 
-    val input2 = "src/main/resources/dbpediamapping20.nt"  //dbpedia-3-9-mappingbased_properties_en
-    val input1 = "src/main/resources/yagofact20.nt"
+    // val input2 = "src/main/resources/dbpediamapping5k.nt"  //dbpedia-3-9-mappingbased_properties_en
+    //  val input1 = "src/main/resources/yagofact5k.nt"
 
- //   val input1 = "src/main/resources/yagofacts50k.nt"
+    //   val input1 = "src/main/resources/yagofacts50k.nt"
 
-//    val input1 = "src/main/resources/dbpediaOnlyAppleobjects.nt"
-//    val input2 = "src/main/resources/yagoonlyAppleobjects.nt"
+    val input1 = "src/main/resources/dbpediaOnlyAppleobjects.nt"
+    val input2 = "src/main/resources/yagoonlyAppleobjects.nt"
 
     //val input1 = "src/main/resources/dbpedia.nt"
     //val input2 = "src/main/resources/yago.nt"
@@ -55,19 +55,19 @@ object Main {
       .appName("Triple merger of " + input1 + " and  " + input2 + " ")
       .getOrCreate()
 
-//    val sparkSession = SparkSession.builder()
-//      .config("spark.kryo.registrator", "net.sansa_stack.owl.spark.dataset.UnmodifiableCollectionKryoRegistrator")
-//      .appName("ManchesterSyntaxOWLAxiomsDatasetBuilderTest").master("local[*]").getOrCreate()
+    //    val sparkSession = SparkSession.builder()
+    //      .config("spark.kryo.registrator", "net.sansa_stack.owl.spark.dataset.UnmodifiableCollectionKryoRegistrator")
+    //      .appName("ManchesterSyntaxOWLAxiomsDatasetBuilderTest").master("local[*]").getOrCreate()
 
-    val triplesRDD1 = NTripleReader.load(sparkSession, URI.create(input1))
+    val triplesRDD1 = NTripleReader.load(sparkSession, URI.create(input1)) // RDD[Triple]
     val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input2))
 
     //##################### Get graph specs ############################
     triplesRDD1.cache()
-    println("Number of triples in the first KG file "+ input1 + "\n")   //dbpedia 2457
+    println("Number of triples in the first KG file " + input1 + "\n") //dbpedia 2457
     println(triplesRDD1.count().toString)
 
-    println("Number of triples in the second KG "+ input2 + "\n") //yago 738
+    println("Number of triples in the second KG " + input2 + "\n") //yago 738
     println(triplesRDD2.count().toString)
 
 
@@ -77,9 +77,9 @@ object Main {
     subject1Count.take(5).foreach(println(_))
 
     val predicates1 = triplesRDD1.map(_.getPredicate).distinct
-    println("Number of unique predicates in the first KB is "+predicates1.count()) //333
+    println("Number of unique predicates in the first KB is " + predicates1.count()) //333
     val predicates2 = triplesRDD2.map(_.getPredicate).distinct
-    println("Number of unique predicates in the second KB is "+predicates2.count()) //83
+    println("Number of unique predicates in the second KB is " + predicates2.count()) //83
 
     // Storing the unique predicates in separated files, one for DBpedia and one for YAGO
     val predicatesKG1 = triplesRDD1.map(f => (f.getPredicate, 1))
@@ -101,13 +101,13 @@ object Main {
 
     //union all predicates1
     val unionRelation = triplesRDD1.getPredicates.union(triplesRDD2.getPredicates).distinct()
-    println("Number of unique predicates1 in the two KGs is "+ unionRelation.count()) //=413 it should be 333+83=416 which means we have 3 predicates1 is the same
+    println("Number of unique predicates1 in the two KGs is " + unionRelation.count()) //=413 it should be 333+83=416 which means we have 3 predicates1 is the same
     println("10 first unique relations  \n")
     unionRelation.take(10).foreach(println(_))
 
     val unionRelationIDsssss = (triplesRDD1.getPredicates.union(triplesRDD2.getPredicates)).distinct().zipWithUniqueId
     //val unionRelationIDs = (triplesRDD1.getPredicates ++ triplesRDD2.getPredicates).distinct()
-    println("Number of unique relationIDssssss in the two KGs is "+ unionRelationIDsssss.count())//413
+    println("Number of unique relationIDssssss in the two KGs is " + unionRelationIDsssss.count()) //413
     println("10 first unique relationIDssssss  \n")
     unionRelationIDsssss.take(10).foreach(println(_))
 
@@ -116,13 +116,13 @@ object Main {
     val unionRelationIDs = (triplesRDD1.getPredicates ++ triplesRDD2.getPredicates)
       .map(line => line.toString()).distinct.zipWithUniqueId
     //val unionRelationIDs = (triplesRDD1.getPredicates ++ triplesRDD2.getPredicates).distinct()
-    println("Number of unique relationIDs in the two KGs is "+ unionRelationIDs.count())//413
+    println("Number of unique relationIDs in the two KGs is " + unionRelationIDs.count()) //413
     println("10 first unique relationIDs  \n")
     unionRelationIDs.take(10).foreach(println(_))
 
     //val unionEntities = triplesRDD1.getSubjects.union(triplesRDD2.getSubjects).union(triplesRDD1.getObjects.union(triplesRDD2.getObjects)).distinct()
-    val unionEntities = (triplesRDD1.getSubjects++ triplesRDD1.getObjects++ triplesRDD2.getSubjects++ triplesRDD2.getObjects).distinct().zipWithUniqueId
-    println("Number of unique entities in the two KGs is "+ unionEntities.count()) //=355
+    val unionEntities = (triplesRDD1.getSubjects ++ triplesRDD1.getObjects ++ triplesRDD2.getSubjects ++ triplesRDD2.getObjects).distinct().zipWithUniqueId
+    println("Number of unique entities in the two KGs is " + unionEntities.count()) //=355
     //println("10 first unique entities  \n")
     //unionEntities.take(10).foreach(println(_))
 
@@ -133,7 +133,7 @@ object Main {
         ++ triplesRDD2.getSubjects
         ++ triplesRDD2.getObjects)
       .map(line => line.toString()).distinct.zipWithUniqueId
-    println("Number of unique entity IDs in the two KGs is "+ unionEntityIDs.count()) //=225!!
+    println("Number of unique entity IDs in the two KGs is " + unionEntityIDs.count()) //=225!!
 
 
     //distinct does not work on Node objects and the result of zipWithUniqueId become wrong
@@ -143,7 +143,7 @@ object Main {
     //this.printGraphInfo(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
     //var merg = new MergeKGs()
 
-   // var cm = merg.createCoordinateMatrix(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
+    // var cm = merg.createCoordinateMatrix(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
 
     //println("matrix rows:" + cm.numRows() + "\n")
     //println("matrix cols:" + cm.numCols() + "\n")
@@ -158,79 +158,91 @@ object Main {
     // score with the vector representations of entities and relations.
 
 
-
-
     //Getting the predicates without URIs
-    val predicatesWithoutURIs1 = triplesRDD1.map(_.getPredicate.getLocalName).distinct()//.zipWithIndex()
-    println("Predicates without URI in KG1 are "+ predicatesWithoutURIs1.count()) //313
+    val predicatesWithoutURIs1 = triplesRDD1.map(_.getPredicate.getLocalName).distinct() //.zipWithIndex()
+    println("Predicates without URI in KG1 are " + predicatesWithoutURIs1.count()) //313
     predicatesWithoutURIs1.distinct().take(5).foreach(println)
-    println("first predicate "+ predicatesWithoutURIs1.take(predicatesWithoutURIs1.count().toInt).apply(0))
+    println("first predicate " + predicatesWithoutURIs1.take(predicatesWithoutURIs1.count().toInt).apply(0))
 
-    val predicatesWithoutURIs2 = triplesRDD2.map(_.getPredicate.getLocalName).distinct()//.zipWithIndex()
-    println("Predicates without URI in KG2 are "+ predicatesWithoutURIs2.count()) //81
+    val predicatesWithoutURIs2 = triplesRDD2.map(_.getPredicate.getLocalName).distinct() //.zipWithIndex()
+    println("Predicates without URI in KG2 are " + predicatesWithoutURIs2.count()) //81
     predicatesWithoutURIs2.distinct().take(5).foreach(println)
-    println("first predicate "+ predicatesWithoutURIs2.first())
+    println("first predicate " + predicatesWithoutURIs2.first())
     //println("first predicate "+ predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(1))
 
 
-
-    //############################ Getting similarity between predicates ####################################
-    println("//############################ Getting similarity between predicates ####################################")
-    val  preSim = new PredicatesSimilarity(sparkSession.sparkContext)
-    //this creates array:
-    val similarPredicates = preSim.matchPredicatesByWordNet(predicatesWithoutURIs1,predicatesWithoutURIs2)
-    //instead:
-    //val similarPredicates = preSim.matchPredicatesByWordNetRDD(predicatesWithoutURIs1,predicatesWithoutURIs2)
-
-    val eval:Evaluation = new Evaluation()
-    // this works with array similarPredicates:
-    var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.length)
-    // instead
-    //var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.count())
-    println("Compression Ration in predicates merging = "+ compresionRatio +"%")
-
-   println("//############################ Getting similarity between literal entities  ####################################")
-
-    val literalObjects1 = triplesRDD1.filter(_.getObject.isLiteral).map(_.getObject.getLiteralValue.toString).distinct()
-    val literalObjects2 = triplesRDD2.filter(_.getObject.isLiteral).map(_.getObject.getLiteralValue.toString).distinct()
-
-    val  entSim = new EntitiesSimilarity(sparkSession.sparkContext)
-    //this creates array:
-    val similarLiteralEntities = preSim.matchPredicatesByWordNet(literalObjects1, literalObjects2)
-    //instead:
-    //val similarLiteralEntities = preSim.matchPredicatesByWordNetRDD(literalObjects1, literalObjects2)
-
-    // this works with array similarLiteralEntities
-    val compresionRatio2 = eval.compressionRatio(literalObjects1.count()+literalObjects2.count(), similarLiteralEntities.length)
-    //instead:
-    //val compresionRatio2 = eval.compressionRatio(literalObjects1.count()+literalObjects2.count(), similarLiteralEntities.count())
-
-    println("Compression Ration in entity merging = "+ compresionRatio2 +"%")
-
-    println("//############################ Getting similarity between non-literal (called source in jena definition) entities (Subjects and objects) ####################################")
- // exactly like predicates:
-
-    val objects1 = triplesRDD1.filter(_.getObject.isURI).map(_.getObject.getLocalName).distinct()
-    val objects2 = triplesRDD2.filter(_.getObject.isURI).map(_.getObject.getLocalName).distinct()
-    val subjects1 = triplesRDD1.map(_.getSubject.getLocalName).distinct()
-    val subjects2 = triplesRDD2.map(_.getSubject.getLocalName).distinct()
-    val entitiy1 = objects1 ++ subjects1
-    val entitiy2 = objects2 ++ subjects2
-
-    val  subSim = new PredicatesSimilarity(sparkSession.sparkContext)
-    //this creates array:
-    val similarEntities = subSim.matchPredicatesByWordNet(entitiy1,entitiy2)
-    //instead
-    //val similarEntities = subSim.matchPredicatesByWordNetRDD(entitiy1,entitiy2)
-
-    // this works with array of similarEntities
-    compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.length)
-    //instead:
-    //compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.count())
+    val makeResult1 = false
+    val makeResult2 = true
+    val makeResult3 = false
 
 
-    println("Compression Ration in predicates merging = "+ compresionRatio +"%")
+    if (makeResult1) {
+      //############################ Getting similarity between predicates ####################################
+      println("//############################ Getting similarity between predicates ####################################")
+      var preSim = new PredicatesSimilarity(sparkSession.sparkContext)
+      //this creates array:
+      val similarPredicates = preSim.matchPredicatesByWordNet(predicatesWithoutURIs1, predicatesWithoutURIs2)
+      //instead:
+      //val similarPredicates = preSim.matchPredicatesByWordNetRDD(predicatesWithoutURIs1,predicatesWithoutURIs2)
 
+      var eval: Evaluation = new Evaluation()
+      // this works with array similarPredicates:
+      var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count() + predicatesWithoutURIs2.count(), similarPredicates.length)
+      // instead
+      //var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.count())
+      println("Compression Ration in predicates merging = " + compresionRatio + "%")
+    }
+
+    if (makeResult2) {
+      println("//############################ Getting similarity between literal entities  ####################################")
+
+      var preSim = new PredicatesSimilarity(sparkSession.sparkContext)
+
+      val literalObjects1 = triplesRDD1.filter(_.getObject.isLiteral).map(_.getObject.getLiteralValue.toString).distinct()
+      val literalObjects2 = triplesRDD2.filter(_.getObject.isLiteral).map(_.getObject.getLiteralValue.toString).distinct()
+
+      val entSim = new EntitiesSimilarity(sparkSession.sparkContext)
+      //this creates array:
+      val similarLiteralEntities = preSim.matchPredicatesByWordNet(literalObjects1, literalObjects2)
+      //instead:
+      //val similarLiteralEntities = preSim.matchPredicatesByWordNetRDD(literalObjects1, literalObjects2)
+
+      var eval: Evaluation = new Evaluation()
+
+      // this works with array similarLiteralEntities
+      val compresionRatio2 = eval.compressionRatio(literalObjects1.count() + literalObjects2.count(), similarLiteralEntities.length)
+      //instead:
+      //val compresionRatio2 = eval.compressionRatio(literalObjects1.count()+literalObjects2.count(), similarLiteralEntities.count())
+
+      println("Compression Ration in entity merging = " + compresionRatio2 + "%")
+    }
+
+    if (makeResult3) {
+      println("//############################ Getting similarity between non-literal (called source in jena definition) entities (Subjects and objects) ####################################")
+      // exactly like predicates:
+
+      val objects1 = triplesRDD1.filter(_.getObject.isURI).map(_.getObject.getLocalName).distinct()
+      val objects2 = triplesRDD2.filter(_.getObject.isURI).map(_.getObject.getLocalName).distinct()
+      val subjects1 = triplesRDD1.map(_.getSubject.getLocalName).distinct()
+      val subjects2 = triplesRDD2.map(_.getSubject.getLocalName).distinct()
+      val entitiy1 = objects1 ++ subjects1
+      val entitiy2 = objects2 ++ subjects2
+
+      val subSim = new PredicatesSimilarity(sparkSession.sparkContext)
+      //this creates array:
+      val similarEntities = subSim.matchPredicatesByWordNet(entitiy1, entitiy2)
+      //instead
+      //val similarEntities = subSim.matchPredicatesByWordNetRDD(entitiy1,entitiy2)
+
+      var eval: Evaluation = new Evaluation()
+
+      // this works with array of similarEntities
+      val compresionRatio3 = eval.compressionRatio(predicatesWithoutURIs1.count() + predicatesWithoutURIs2.count(), similarPredicates.length)
+      //instead:
+      //val compresionRatio3 = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.count())
+
+      println("Compression Ration in predicates merging = " + compresionRatio3 + "%")
+    }
     sparkSession.stop
   }
 
