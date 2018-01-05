@@ -23,6 +23,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
 
   def checkLowerCaseStringEqulity(string1: String, string2: String): Boolean = {
 
+    if(string1.length == 0 || string2.length == 0)return false
     string1.toLowerCase == string2.toLowerCase
   }
 
@@ -173,6 +174,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
 
     val string1l = this.removeSpecialChars(string1) // literals in difference KGs may be in double quotes etc.
     val string2l = this.removeSpecialChars(string2)
+    if(string1l.length == 0 || string2l.length == 0) return 0.0
 
     this.jaccardPredicateSimilarityWithWordNet(string1l, string2l)
   }

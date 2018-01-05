@@ -64,8 +64,8 @@ object Main {
 
     val makeResult0 = false
     val makeResult1 = false
-    val makeResult2 = true
-    val makeResult3 = false
+    val makeResult2 = false
+    val makeResult3 = true
 
 
     if (makeResult0) {
@@ -208,7 +208,7 @@ object Main {
       literalObjects1.distinct().take(5).foreach(println)
       println("First literal entity " + literalObjects1.take(literalObjects1.count().toInt).apply(0))
 
-      println("Literal entities (without URI) without URI in KG2 are " + literalObjects2.count()) //81
+      println("Literal entities (without URI) in KG2 are " + literalObjects2.count()) //81
       literalObjects2.distinct().take(5).foreach(println)
       println("First literal entity" + literalObjects2.first())
 
@@ -239,9 +239,18 @@ object Main {
       val entitiy1 = objects1 ++ subjects1
       val entitiy2 = objects2 ++ subjects2
 
-      val subSim = new PredicatesSimilarity(sparkSession.sparkContext)
+      println("Entities (with URI) in KG1 are " + entitiy1.count())
+      entitiy1.distinct().take(5).foreach(println)
+      println("First literal entity " + entitiy1.take(entitiy1.count().toInt).apply(0))
+
+      println("Entities (with URI) in KG2 are " + entitiy2.count()) //81
+      entitiy2.distinct().take(5).foreach(println)
+      println("First literal entity" + entitiy2.first())
+
+
+      val subSim = new EntitiesSimilarity(sparkSession.sparkContext)
       //this creates array:
-      val similarEntities = subSim.matchPredicatesByWordNet(entitiy1, entitiy2)
+      val similarEntities = subSim.matchLiteralEntitiesByWordNet(entitiy1, entitiy2)
       //instead
       //val similarEntities = subSim.matchPredicatesByWordNetRDD(entitiy1,entitiy2)
 
@@ -252,7 +261,7 @@ object Main {
       //instead:
       //val compressionRatio3 = eval.compressionRatio(entitiy1.count()+entitiy2.count(),similarEntities.count())
 
-      println("Compression Ration in non-literal Entities merging = " + compressionRatio3 + "%")
+      println("Compression Ratio in non-literal Entities merging = " + compressionRatio3 + "%")
     }
     sparkSession.stop
   }
