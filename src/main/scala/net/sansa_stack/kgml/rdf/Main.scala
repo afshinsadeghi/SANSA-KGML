@@ -34,14 +34,27 @@ import scala.collection.JavaConverters._
  */
 object Main {
 
+  var input1 = ""
+  var input2 = ""
+
   def main(args: Array[String]) = {
+    println("Comparing knowledge graphs")
+    println("Please give pathes to the two files that contains the dataset in N-Triples format")
+    println("otherwise it reads from default example datasets")
+    if (args.headOption.isDefined) {
+      input1 = args(0)
+      input2 = args(1)
+    } else {
+      println("There is no given argument")
+      input1 = "datasets/dbpediaOnlyAppleobjects.nt"
+      input2 = "datasets/yagoonlyAppleobjects.nt"
+    }
+    println(input1)
+    println(input2)
 
     // val input2 = "datasets/dbpediamapping5k.nt"  //dbpedia-3-9-mappingbased_properties_en
     //  val input1 = "datasets/yagofact5k.nt"
 
-
-    val input1 = "datasets/dbpediaOnlyAppleobjects.nt"
-    val input2 = "datasets/yagoonlyAppleobjects.nt"
 
     //val input1 = "datasets/dbpedia.nt"
     //val input2 = "datasets/yago.nt"
@@ -142,28 +155,28 @@ object Main {
       println("Number of unique entity IDs in the two KGs is " + unionEntityIDs.count()) //=225!!
 
     }
-      //distinct does not work on Node objects and the result of zipWithUniqueId become wrong
-      // therefore firstly I convert node to string by .map(line => line.toString())
+    //distinct does not work on Node objects and the result of zipWithUniqueId become wrong
+    // therefore firstly I convert node to string by .map(line => line.toString())
 
 
-      //this.printGraphInfo(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
-      //var merg = new MergeKGs()
+    //this.printGraphInfo(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
+    //var merg = new MergeKGs()
 
-      // var cm = merg.createCoordinateMatrix(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
+    // var cm = merg.createCoordinateMatrix(unifiedTriplesRDD, unionEntityIDs, unionRelationIDs)
 
-      //println("matrix rows:" + cm.numRows() + "\n")
-      //println("matrix cols:" + cm.numCols() + "\n")
+    //println("matrix rows:" + cm.numRows() + "\n")
+    //println("matrix cols:" + cm.numCols() + "\n")
 
-      //find their similarity, subjects and predicates1. example> barak obama in different KBs
-      // find similarites between URI of the same things in differnet  languages  of dbpeida
+    //find their similarity, subjects and predicates1. example> barak obama in different KBs
+    // find similarites between URI of the same things in differnet  languages  of dbpeida
 
-      //what I propose is modling it with dep neural networks
-      // The training part aims to learn the semantic relationships among
-      // entities and relations with the negative entities (bad entities),
-      // and the goal of the prediction part is giving i triplet
-      // score with the vector representations of entities and relations.
+    //what I propose is modling it with dep neural networks
+    // The training part aims to learn the semantic relationships among
+    // entities and relations with the negative entities (bad entities),
+    // and the goal of the prediction part is giving i triplet
+    // score with the vector representations of entities and relations.
 
-      if (makeResult1) {
+    if (makeResult1) {
 
       //Getting the predicates without URIs
       val predicatesWithoutURIs1 = triplesRDD1.map(_.getPredicate.getLocalName).distinct() //.zipWithIndex()
