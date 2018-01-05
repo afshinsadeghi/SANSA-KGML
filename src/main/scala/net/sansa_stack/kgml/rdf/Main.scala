@@ -36,6 +36,7 @@ object Main {
 
   var input1 = ""
   var input2 = ""
+  var input3 = ""
 
   def main(args: Array[String]) = {
     println("Comparing knowledge graphs")
@@ -44,13 +45,16 @@ object Main {
     if (args.headOption.isDefined) {
       input1 = args(0)
       input2 = args(1)
+      input3 = args(2)
     } else {
-      println("There is no given argument")
+      println("There is no given argument. For example you can give:")
       input1 = "datasets/dbpediaOnlyAppleobjects.nt"
       input2 = "datasets/yagoonlyAppleobjects.nt"
+      input3 = "1"
     }
     println(input1)
     println(input2)
+    println(input3)
 
     // val input2 = "datasets/dbpediamapping5k.nt"  //dbpedia-3-9-mappingbased_properties_en
     //  val input1 = "datasets/yagofact5k.nt"
@@ -74,10 +78,23 @@ object Main {
     val triplesRDD1 = NTripleReader.load(sparkSession, URI.create(input1)) // RDD[Triple]
     val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input2))
 
-    val makeResult0 = false
-    val makeResult1 = false
-    val makeResult2 = false
-    val makeResult3 = true
+    var makeResult0 = false
+    var makeResult1 = false
+    var makeResult2 = false
+    var makeResult3 = false
+
+    if(input3 == "0"){
+      makeResult0 = true
+    }
+    if(input3 == "1"){
+      makeResult1 = true
+    }
+    if(input3 == "2"){
+      makeResult2 = true
+    }
+    if(input3 == "3"){
+      makeResult3 = true
+    }
 
 
     if (makeResult0) {
