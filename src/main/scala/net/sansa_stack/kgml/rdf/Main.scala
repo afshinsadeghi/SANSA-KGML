@@ -36,23 +36,22 @@ object Main {
 
   def main(args: Array[String]) = {
 
-    // val input2 = "src/main/resources/dbpediamapping5k.nt"  //dbpedia-3-9-mappingbased_properties_en
-    //  val input1 = "src/main/resources/yagofact5k.nt"
+    // val input2 = "datasets/dbpediamapping5k.nt"  //dbpedia-3-9-mappingbased_properties_en
+    //  val input1 = "datasets/yagofact5k.nt"
 
-    //   val input1 = "src/main/resources/yagofacts50k.nt"
 
-    val input1 = "src/main/resources/dbpediaOnlyAppleobjects.nt"
-    val input2 = "src/main/resources/yagoonlyAppleobjects.nt"
+    val input1 = "datasets/dbpediaOnlyAppleobjects.nt"
+    val input2 = "datasets/yagoonlyAppleobjects.nt"
 
-    //val input1 = "src/main/resources/dbpedia.nt"
-    //val input2 = "src/main/resources/yago.nt"
+    //val input1 = "datasets/dbpedia.nt"
+    //val input2 = "datasets/yago.nt"
 
     val sparkSession = SparkSession.builder
       .master("local[*]")
       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .config("spark.kryoserializer.buffer.max", "1024")
       .config("spark.kryo.registrator", "net.sansa_stack.kgml.rdf.Registrator")
-      .appName("Triple merger of " + input1 + " and  " + input2 + " ")
+      .appName("Triple merger of " + input1 + " and " + input2 + " ")
       .getOrCreate()
 
     //    val sparkSession = SparkSession.builder()
