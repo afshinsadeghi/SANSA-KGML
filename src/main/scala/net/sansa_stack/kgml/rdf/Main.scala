@@ -214,7 +214,7 @@ object Main {
       //instead:
       //val compresionRatio2 = eval.compressionRatio(literalObjects1.count()+literalObjects2.count(), similarLiteralEntities.count())
 
-      println("Compression Ration in entity merging = " + compresionRatio2 + "%")
+      println("Compression Ration in literal entities merging = " + compresionRatio2 + "%")
     }
 
     if (makeResult3) {
@@ -237,11 +237,11 @@ object Main {
       var eval: Evaluation = new Evaluation()
 
       // this works with array of similarEntities
-      val compresionRatio3 = eval.compressionRatio(predicatesWithoutURIs1.count() + predicatesWithoutURIs2.count(), similarPredicates.length)
+      val compresionRatio3 = eval.compressionRatio(predicatesWithoutURIs1.count() + predicatesWithoutURIs2.count(), similarEntities.length)
       //instead:
       //val compresionRatio3 = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.count())
 
-      println("Compression Ration in predicates merging = " + compresionRatio3 + "%")
+      println("Compression Ration in non-literal Entities merging = " + compresionRatio3 + "%")
     }
     sparkSession.stop
   }
