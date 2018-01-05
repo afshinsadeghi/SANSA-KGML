@@ -44,16 +44,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
     val string1l = this.removeSpecialChars(string1) // literals in difference KGs may be in double quotes etc.
     val string2l = this.removeSpecialChars(string2)
 
-    var similarity = 0.0
-    if (string1l.toLowerCase == string2l.toLowerCase)
-    { // This is for phrases that has exactly same sequence of words
-
-      similarity = 1.0
-    } else {
-
-      similarity = getMeanWordNetNounSimilarity(string1l, string2l)
-    }
-
+   val similarity = this.getPredicateSimilarity(string1l, string2l)
     similarity
 
   }
@@ -134,7 +125,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
   def getThreshold: Double = threshold
 
   def removeSpecialChars(string1: String): String = {
-    val string2 = string1.replaceAll("""([\p{Punct}&&[^.]]|\b\p{IsLetter}{1,2}\b)\s*""", "")
+    val string2 = string1.replaceAll("""([\p{Punct}&&[^.]]|\b\p{IsLetter}{1,2}\b)\s*""", " ").trim
   string2
   }
 
@@ -151,7 +142,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
         "(?<=[A-Za-z])(?=[^A-Za-z])"
       ),
       " "
-    ).replaceAll("  ", " ").split(" ")
+    ).replaceAll("  ", " ").replaceAll("  ", " ").split(" ")
   }
 
 
@@ -159,15 +150,31 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
 
     if(this.checkLowerCaseStringEqulity(string1, string2)) return 1.0
 
-    val array1 = this.splitCamelCase(string1)
-    val array2 = this.splitCamelCase(string2)
+    var array1 = this.splitCamelCase(string1)
+    var array2 = this.splitCamelCase(string2)
+    val maxNumOfWordsInStringToTraverse = 5 //is added to make similarity check faster
+    val maxTraverse1 = Math.min(maxNumOfWordsInStringToTraverse, array1.length )
+    val maxTraverse2 = Math.min(maxNumOfWordsInStringToTraverse, array2.length )
+    array1 = array1.take(maxTraverse1)
+    array2 = array2.take(maxTraverse2)
     var intersectionCount = 0.0
     var localSim = 0.0
-    for (x <- array1; y <- array2){
+    for (x <- array1 ; y <- array2){
       localSim = this.getPredicateSimilarity(x, y)
       if (threshold <= localSim ) { intersectionCount =  intersectionCount + localSim}
     }
+    //println(array1.toList, array2.toList)
     this.jaccardSimilarity(intersectionCount, array1.length, array2.length)
+  }
+
+  def jaccardLiteralSimilarityWithWordNet( string1 : String, string2 : String ) : Double = {
+
+    if(this.checkLowerCaseStringEqulity(string1, string2)) return 1.0
+
+    val string1l = this.removeSpecialChars(string1) // literals in difference KGs may be in double quotes etc.
+    val string2l = this.removeSpecialChars(string2)
+
+    this.jaccardPredicateSimilarityWithWordNet(string1l, string2l)
   }
 
 }
