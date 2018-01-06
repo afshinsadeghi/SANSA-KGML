@@ -1,6 +1,6 @@
-name          := "ScalaWordNet"
+name          := "SparkScalaWordNet"
 
-organization  := "de.sciss"
+organization  := "sda"
 
 version       := "0.1.0-SNAPSHOT"
 
