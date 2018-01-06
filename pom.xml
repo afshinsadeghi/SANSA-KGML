@@ -71,6 +71,13 @@
 			<version>${spark.version}</version>
 		</dependency>
 
+		<!-- Apache JENA arq -->
+		<dependency>
+			<groupId>org.apache.jena</groupId>
+			<artifactId>jena-arq</artifactId>
+			<version>${jena.version}</version>
+		</dependency>
+
 		<!-- Apache JENA 3.x -->
 		<dependency>
 			<groupId>org.apache.jena</groupId>
