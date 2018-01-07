@@ -40,13 +40,15 @@ object Main {
 
   def main(args: Array[String]) = {
     println("Comparing knowledge graphs")
-    println("Please give pathes to the two files that contains the dataset in N-Triples format")
-    println("otherwise it reads from default example datasets")
+
     if (args.headOption.isDefined) {
       input1 = args(0)
       input2 = args(1)
       input3 = args(2)
     } else {
+      println("Please give pathes to the two files that contains the dataset in N-Triples format")
+      println("otherwise it reads from default example datasets.")
+
       println("There is no given argument. For example you can give:")
       input1 = "datasets/dbpediaOnlyAppleobjects.nt"
       input2 = "datasets/yagoonlyAppleobjects.nt"
