@@ -37,7 +37,7 @@ object Main {
   var input1 = ""
   var input2 = ""
   var input3 = ""
-
+  var input4 = false
   def main(args: Array[String]) = {
     println("Comparing knowledge graphs")
 
@@ -45,18 +45,29 @@ object Main {
       input1 = args(0)
       input2 = args(1)
       input3 = args(2)
+
     } else {
-      println("Please give pathes to the two files that contains the dataset in N-Triples format")
-      println("otherwise it reads from default example datasets.")
+      println("Please give pathes to the two files that contains the dataset in N-Triples format and the experiment number")
+      println("Otherwise it reads from default example data sets.")
+      println("Experiment number 0: third ar General info of the two datasets.")
+      println("Experiment number 1: Getting similarity between predicates")
+      println("Experiment number 2: Getting similarity between literal entities")
+      println("Experiment number 3: Getting similarity between non-literal (called source in jena definition) entities (Subjects and objects)")
+      println("Input 4 sets the WordNet similarity to produce RDD if be true and to array if be false")
+      println("the default value is false ")
+      println(" ")
 
       println("There is no given argument. For example you can give:")
       input1 = "datasets/dbpediaOnlyAppleobjects.nt"
       input2 = "datasets/yagoonlyAppleobjects.nt"
       input3 = "1"
+      input4 = false
     }
     println(input1)
     println(input2)
     println(input3)
+    println(input4.toString)
+
 
     // val input2 = "datasets/dbpediamapping5k.nt"  //dbpedia-3-9-mappingbased_properties_en
     //  val input1 = "datasets/yagofact5k.nt"
@@ -85,16 +96,16 @@ object Main {
     var makeResult2 = false
     var makeResult3 = false
 
-    if(input3 == "0"){
+    if(input3 == "0"){   // General info of the two datasets
       makeResult0 = true
     }
-    if(input3 == "1"){
+    if(input3 == "1"){ // Getting similarity between predicates
       makeResult1 = true
     }
-    if(input3 == "2"){
+    if(input3 == "2"){ // Getting similarity between literal entities
       makeResult2 = true
     }
-    if(input3 == "3"){
+    if(input3 == "3"){ // Getting similarity between non-literal (called source in jena definition) entities (Subjects and objects)
       makeResult3 = true
     }
 
@@ -213,17 +224,19 @@ object Main {
       //############################ Getting similarity between predicates ####################################
       println("//############################ Getting similarity between predicates ####################################")
       var preSim = new PredicatesSimilarity(sparkSession.sparkContext)
-      //this creates array:
-      val similarPredicates = preSim.matchPredicatesByWordNet(predicatesWithoutURIs1, predicatesWithoutURIs2)
-      //instead:
-      //val similarPredicates = preSim.matchPredicatesByWordNetRDD(predicatesWithoutURIs1,predicatesWithoutURIs2)
-
       var eval: Evaluation = new Evaluation()
-      // this works with array similarPredicates:
-      var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count() + predicatesWithoutURIs2.count(), similarPredicates.length)
-      // instead
-      //var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.count())
-      println("Compression Ration in predicates merging = " + compresionRatio + "%")
+
+      if (!input4) {
+        //this creates array:
+        val similarPredicates = preSim.matchPredicatesByWordNet(predicatesWithoutURIs1, predicatesWithoutURIs2)
+        // this works with array similarPredicates:
+        var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count() + predicatesWithoutURIs2.count(), similarPredicates.length)
+        println("Compression Ration in predicates merging = " + compresionRatio + "%")
+      } else {
+        val similarPredicates = preSim.matchPredicatesByWordNetRDD(predicatesWithoutURIs1,predicatesWithoutURIs2)
+        var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count()+predicatesWithoutURIs2.count(),similarPredicates.count())
+        println("Compression Ration in predicates merging = " + compresionRatio + "%")
+      }
     }
 
     if (makeResult2) {
@@ -244,19 +257,22 @@ object Main {
       println("First literal entity" + literalObjects2.first())
 
       val entSim = new EntitiesSimilarity(sparkSession.sparkContext)
-      //this creates array:
-      val similarLiteralEntities = entSim.matchLiteralEntitiesByWordNet(literalObjects1, literalObjects2)
-      //instead:
-      //val similarLiteralEntities = preSim.matchPredicatesByWordNetRDD(literalObjects1, literalObjects2)
-
       var eval: Evaluation = new Evaluation()
+      if (!input4) {
+        //this creates array:
+        val similarLiteralEntities = entSim.matchLiteralEntitiesByWordNet(literalObjects1, literalObjects2)
+        var eval: Evaluation = new Evaluation()
+        // this works with array similarLiteralEntities
+        val compressionRatio2 = eval.compressionRatio(literalObjects1.count() + literalObjects2.count(), similarLiteralEntities.length)
+        println("Compression Ration in literal entities merging = " + compressionRatio2 + "%")
 
-      // this works with array similarLiteralEntities
-      val compressionRatio2 = eval.compressionRatio(literalObjects1.count() + literalObjects2.count(), similarLiteralEntities.length)
-      //instead:
-      //val compressionRatio2 = eval.compressionRatio(literalObjects1.count()+literalObjects2.count(), similarLiteralEntities.count())
+      }else{
+        val similarLiteralEntities = entSim.matchLiteralEntitiesByWordNetRDD(literalObjects1, literalObjects2)
+        val compressionRatio2 = eval.compressionRatio(literalObjects1.count()+literalObjects2.count(), similarLiteralEntities.count())
+        println("Compression Ration in literal entities merging = " + compressionRatio2 + "%")
+      }
 
-      println("Compression Ration in literal entities merging = " + compressionRatio2 + "%")
+
     }
 
     if (makeResult3) {
@@ -278,21 +294,20 @@ object Main {
       entitiy2.distinct().take(5).foreach(println)
       println("First literal entity" + entitiy2.first())
 
-
       val subSim = new EntitiesSimilarity(sparkSession.sparkContext)
-      //this creates array:
-      val similarEntities = subSim.matchLiteralEntitiesByWordNet(entitiy1, entitiy2)
-      //instead
-      //val similarEntities = subSim.matchPredicatesByWordNetRDD(entitiy1,entitiy2)
-
       var eval: Evaluation = new Evaluation()
 
-      // this works with array of similarEntities
-      val compressionRatio3 = eval.compressionRatio(entitiy1.count() + entitiy2.count(), similarEntities.length)
-      //instead:
-      //val compressionRatio3 = eval.compressionRatio(entitiy1.count()+entitiy2.count(),similarEntities.count())
-
-      println("Compression Ratio in non-literal Entities merging = " + compressionRatio3 + "%")
+      if (!input4) {
+        //this creates array:
+        val similarEntities = subSim.matchLiteralEntitiesByWordNet(entitiy1, entitiy2)
+        // this works with array of similarEntities
+        val compressionRatio3 = eval.compressionRatio(entitiy1.count() + entitiy2.count(), similarEntities.length)
+        println("Compression Ratio in non-literal Entities merging = " + compressionRatio3 + "%")
+      }else{
+        val similarEntities = subSim.matchLiteralEntitiesByWordNetRDD(entitiy1,entitiy2)
+        val compressionRatio3 = eval.compressionRatio(entitiy1.count()+entitiy2.count(),similarEntities.count())
+        println("Compression Ratio in non-literal Entities merging = " + compressionRatio3 + "%")
+      }
     }
     sparkSession.stop
   }
