@@ -37,7 +37,7 @@ object Main {
   var input1 = ""
   var input2 = ""
   var input3 = ""
-  var input4 = false
+  var input4 = "false"
   def main(args: Array[String]) = {
     println("Comparing knowledge graphs")
 
@@ -61,14 +61,18 @@ object Main {
       input1 = "datasets/dbpediaOnlyAppleobjects.nt"
       input2 = "datasets/yagoonlyAppleobjects.nt"
       input3 = "1"
-      input4 = false
+      input4 = "false"
     }
     println(input1)
     println(input2)
     println(input3)
-    println(input4.toString)
-
-
+    println(input4)
+    var RunWordNetWithRDD = false
+    if(input4 == "false" ){
+      RunWordNetWithRDD = false
+    } else{
+      RunWordNetWithRDD = true
+    }
     // val input2 = "datasets/dbpediamapping5k.nt"  //dbpedia-3-9-mappingbased_properties_en
     //  val input1 = "datasets/yagofact5k.nt"
 
@@ -226,7 +230,7 @@ object Main {
       var preSim = new PredicatesSimilarity(sparkSession.sparkContext)
       var eval: Evaluation = new Evaluation()
 
-      if (!input4) {
+      if (!RunWordNetWithRDD) {
         //this creates array:
         val similarPredicates = preSim.matchPredicatesByWordNet(predicatesWithoutURIs1, predicatesWithoutURIs2)
         // this works with array similarPredicates:
@@ -258,7 +262,7 @@ object Main {
 
       val entSim = new EntitiesSimilarity(sparkSession.sparkContext)
       var eval: Evaluation = new Evaluation()
-      if (!input4) {
+      if (!RunWordNetWithRDD) {
         //this creates array:
         val similarLiteralEntities = entSim.matchLiteralEntitiesByWordNet(literalObjects1, literalObjects2)
         var eval: Evaluation = new Evaluation()
@@ -297,7 +301,7 @@ object Main {
       val subSim = new EntitiesSimilarity(sparkSession.sparkContext)
       var eval: Evaluation = new Evaluation()
 
-      if (!input4) {
+      if (!RunWordNetWithRDD) {
         //this creates array:
         val similarEntities = subSim.matchLiteralEntitiesByWordNet(entitiy1, entitiy2)
         // this works with array of similarEntities
