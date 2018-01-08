@@ -27,7 +27,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
     //println("Second predicate "+ Predicates2.first())
     //println("first predicate "+ predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(1))
 
-    val similarityThreshold = 0.8
+    val similarityThreshold = 0.5
     val similarityHandler = new SimilarityHandler(similarityThreshold)
 
     println("##########\n")
@@ -80,7 +80,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
   RDD[(String, String, Double)] = {
     println("Number of predicates in KG1 "+ Predicates1.count())
     println("Number of predicates in KG2 "+ Predicates2.count())
-    val similarityThreshold = 0.8
+    val similarityThreshold = 0.5
     val similarityHandler = new SimilarityHandler(similarityThreshold)
 
     println("##########")
