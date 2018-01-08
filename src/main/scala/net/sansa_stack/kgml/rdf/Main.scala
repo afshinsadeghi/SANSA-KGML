@@ -45,7 +45,7 @@ object Main {
       input1 = args(0)
       input2 = args(1)
       input3 = args(2)
-
+      input4 = args(3)
     } else {
       println("Please give pathes to the two files that contains the dataset in N-Triples format and the experiment number")
       println("Otherwise it reads from default example data sets.")
