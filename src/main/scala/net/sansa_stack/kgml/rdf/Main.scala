@@ -63,10 +63,11 @@ object Main {
       input3 = "1"
       input4 = "false"
     }
-    println(input1)
-    println(input2)
-    println(input3)
-    println(input4)
+    println("Selected run configuration is as below")
+    println("KB1: " + input1)
+    println("KB2: " +input2)
+    println("Experiment number: " + input3)
+    println("To RunWordNetWithRDD(with out collection) " + input4)
     var RunWordNetWithRDD = false
     if(input4 == "false" ){
       RunWordNetWithRDD = false
