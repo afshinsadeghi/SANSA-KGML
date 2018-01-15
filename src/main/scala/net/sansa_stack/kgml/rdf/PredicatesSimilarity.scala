@@ -90,13 +90,13 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
    val similarPairsRdd = JoindPredicates.map(x => (x._1, x._2, similarityHandler.
     jaccardPredicateSimilarityWithWordNet(x._1, x._2)))
 
-    similarPairsRdd.cache()
+  //  similarPairsRdd.cache()
   //println("Similarity between paired predicates = ")
   //similarPairsRdd.take(10).foreach(println(_))
 
   val samePredicates = similarPairsRdd.filter(x => x._3 >= similarityThreshold)
   // printing similar predicates with their similarity score
-    samePredicates.cache()
+  //  samePredicates.cache()
     println("Predicates with similarity >= "+ similarityThreshold + " are: "+ samePredicates.count()) //64
   //prints all the similar predicates
   samePredicates.foreach(println(_))

@@ -117,7 +117,7 @@ object Main {
 
     if (makeResult0) {
       //##################### Get graph specs ############################
-      triplesRDD1.cache()
+      //triplesRDD1.cache()
       println("Number of triples in the first KG file " + input1 + "\n") //dbpedia 2457
       println(triplesRDD1.count().toString)
 
