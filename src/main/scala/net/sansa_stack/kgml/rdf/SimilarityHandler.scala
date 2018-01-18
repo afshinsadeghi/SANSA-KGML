@@ -153,7 +153,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
 
     var array1 = this.splitCamelCase(string1)
     var array2 = this.splitCamelCase(string2)
-    val maxNumOfWordsInStringToTraverse = 5 //is added to make similarity check faster
+    val maxNumOfWordsInStringToTraverse = 5 //the text is cut to make the similarity check faster
     val maxTraverse1 = Math.min(maxNumOfWordsInStringToTraverse, array1.length )
     val maxTraverse2 = Math.min(maxNumOfWordsInStringToTraverse, array2.length )
     array1 = array1.take(maxTraverse1)
