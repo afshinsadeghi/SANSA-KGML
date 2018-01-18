@@ -20,3 +20,5 @@ sbt download-database
 ```
 
 
+##To be able to run the project in Spark Cluster mode(other than local or stand alone) 
+Upload the config directory to HDFS

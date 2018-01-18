@@ -47,7 +47,7 @@ object Main {
       input3 = args(2)
       input4 = args(3)
     } else {
-      println("Please give pathes to the two files that contains the dataset in N-Triples format and the experiment number")
+      println("Please give path to the two files that contains the dataset in N-Triples format and the experiment number")
       println("Otherwise it reads from default example data sets.")
       println("Experiment number 0: third ar General info of the two datasets.")
       println("Experiment number 1: Getting similarity between predicates")
