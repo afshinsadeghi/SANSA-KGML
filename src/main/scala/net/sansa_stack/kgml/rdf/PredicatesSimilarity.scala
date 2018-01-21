@@ -42,7 +42,8 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
 
     val JoindPredicates: RDD[(String,String)] = Predicates1.cartesian(Predicates2)
     //JoindPredicates.take(10).foreach(println(_))
-    println("Number of paired predicates after join " + JoindPredicates.count()) //25353
+
+    // removing in deployment: println("Number of paired predicates after join " + JoindPredicates.count()) //25353
 
     //var s = new Array[Double](JoindPredicates.count().toInt)
    // for( i <- 0 to (JoindPredicates.count()-1).toInt){

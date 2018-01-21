@@ -24,7 +24,7 @@ class EntitiesSimilarity(sc : SparkContext) {
 
    // JoindEntities.take(10).foreach(println(_))
 
-    println("Number of entities after join " + JoindEntities.count())
+   // removing in deployment: println("Number of entities after join " + JoindEntities.count())
 
     val similarPairsRdd = JoindEntities.collect().
       map(x => (x._1, x._2, similarityHandler.jaccardLiteralSimilarityWithWordNet(x._1, x._2)))
