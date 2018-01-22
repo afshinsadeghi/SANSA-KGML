@@ -32,8 +32,6 @@ class EntitiesSimilarity(sc : SparkContext) {
     val sameEntities = similarPairsRdd.filter(x => x._3 >= similarityThreshold)
     println("Entities with similarity >"+similarityThreshold +" are: "+ sameEntities.length)
 
-    sameEntities.take(sameEntities.length).foreach(println(_))
-
     sameEntities
   }
 
@@ -61,7 +59,7 @@ class EntitiesSimilarity(sc : SparkContext) {
     val sameEntities = similarPairsRdd.filter(x => x._3 >= similarityThreshold)
     // removing in deployment: println("Entities with similarity >"+similarityThreshold +" are: "+ sameEntities.count())
 
-    sameEntities.foreach(println(_))
+    //sameEntities.foreach(println(_))
 
     sameEntities
   }
