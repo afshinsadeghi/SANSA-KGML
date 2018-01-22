@@ -98,7 +98,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
   val samePredicates = similarPairsRdd.filter(x => x._3 >= similarityThreshold)
   // printing similar predicates with their similarity score
   //  samePredicates.cache()
-    println("Predicates with similarity >= "+ similarityThreshold + " are: "+ samePredicates.count()) //64
+  // removing in deployment:   println("Predicates with similarity >= "+ similarityThreshold + " are: "+ samePredicates.count()) //64
   //prints all the similar predicates
   samePredicates.foreach(println(_))
 
