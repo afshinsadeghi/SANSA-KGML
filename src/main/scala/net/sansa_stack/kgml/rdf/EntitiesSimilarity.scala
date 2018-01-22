@@ -59,7 +59,7 @@ class EntitiesSimilarity(sc : SparkContext) {
       map(x => (x._1, x._2, similarityHandler.jaccardLiteralSimilarityWithWordNet(x._1, x._2)))
 
     val sameEntities = similarPairsRdd.filter(x => x._3 >= similarityThreshold)
-    println("Entities with similarity >"+similarityThreshold +" are: "+ sameEntities.count())
+    // removing in deployment: println("Entities with similarity >"+similarityThreshold +" are: "+ sameEntities.count())
 
     sameEntities.foreach(println(_))
 
