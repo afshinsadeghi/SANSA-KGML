@@ -47,9 +47,12 @@ object Main {
       input1 = args(0)
       input2 = args(1)
       input3 = args(2)
-      input4 = args(3)
-      input5 = args(4)
-
+      if(args.length > 3){
+        input4 = args(3)
+      }
+      if(args.length > 4){
+        input5 = args(4)
+      }
 
     } else {
       println("Arg 1 and 2 are paths:")
