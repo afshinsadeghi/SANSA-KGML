@@ -37,9 +37,8 @@ object Main {
   var input1 = ""
   var input2 = ""
   var input3 = ""
-  var input4 = ""
+  var input4 = "false"
   var input5 = "false"
-  var input6 = "false"
 
   def main(args: Array[String]) = {
     println("Comparing knowledge graphs")
