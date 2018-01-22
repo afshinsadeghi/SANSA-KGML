@@ -247,16 +247,17 @@ object Main {
 
       //Getting the predicates without URIs
       val predicatesWithoutURIs1 = triplesRDD1.map(_.getPredicate.getLocalName).distinct() //.zipWithIndex()
-      println("Predicates without URI in KG1 are " + predicatesWithoutURIs1.count()) //313
-      predicatesWithoutURIs1.distinct().take(5).foreach(println)
-      println("first predicate " + predicatesWithoutURIs1.take(predicatesWithoutURIs1.count().toInt).apply(0))
-
       val predicatesWithoutURIs2 = triplesRDD2.map(_.getPredicate.getLocalName).distinct() //.zipWithIndex()
-      println("Predicates without URI in KG2 are " + predicatesWithoutURIs2.count()) //81
-      predicatesWithoutURIs2.distinct().take(5).foreach(println)
-      println("first predicate " + predicatesWithoutURIs2.first())
-      //println("first predicate "+ predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(1))
+      if (RunWithCountCommands) {
+        println("Predicates without URI in KG1 are " + predicatesWithoutURIs1.count()) //313
+        predicatesWithoutURIs1.distinct().take(5).foreach(println)
+        println("first predicate " + predicatesWithoutURIs1.take(predicatesWithoutURIs1.count().toInt).apply(0))
 
+        println("Predicates without URI in KG2 are " + predicatesWithoutURIs2.count()) //81
+        predicatesWithoutURIs2.distinct().take(5).foreach(println)
+        println("first predicate " + predicatesWithoutURIs2.first())
+        //println("first predicate "+ predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(1))
+      }
 
       //############################ Getting similarity between predicates ####################################
       println("//############################ Getting similarity between predicates ####################################")
