@@ -69,7 +69,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
     // printing similar predicates with their similarity score
     println("Predicates with similarity >= "+ similarityThreshold + " are: "+ samePredicates.length) //64
     //prints all the similar predicates
-    //samePredicates.take(samePredicates.length).foreach(println(_))
+    samePredicates.take(samePredicates.length).foreach(println(_))
 
    samePredicates
   }
@@ -100,7 +100,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
   //  samePredicates.cache()
   // removing in deployment:   println("Predicates with similarity >= "+ similarityThreshold + " are: "+ samePredicates.count()) //64
   //prints all the similar predicates
-  // samePredicates.foreach(println(_))
+  samePredicates.foreach(println(_))
 
     samePredicates
   }

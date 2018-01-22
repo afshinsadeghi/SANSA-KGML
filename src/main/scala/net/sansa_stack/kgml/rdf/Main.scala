@@ -48,12 +48,11 @@ object Main {
       input1 = args(0)
       input2 = args(1)
       input3 = args(2)
-      input4 = args(3)
+      if(args.length > 3){
+        input4 = args(3)
+      }
       if(args.length > 4){
         input5 = args(4)
-      }
-      if(args.length > 5){
-        input6 = args(5)
       }
 
     } else {
@@ -67,13 +66,11 @@ object Main {
       println("Experiment number 2: Getting similarity between literal entities")
       println("Experiment number 3: Getting similarity between non-literal (called source in jena definition) entities (Subjects and objects)")
       println(" ")
-      println("Arg 4 is the output directory")
-      println(" ")
-      println("Arg 5 is to Not to use collect on the main calculation")
+      println("Arg 4 is to Not to use collect on the main calculation")
       println("By that input 4 sets the WordNet similarity to produce RDD instead of array if arg4 is true")
       println("the default value is false. so to use collect but it requires a lot of RAM on the driver program")
       println(" ")
-      println("Arg 6 is to call count() and print info of KGs (like number of literals . predicates etc)")
+      println("Arg 5 is to call count() and print info of KGs (like number of literals . predicates etc)")
       println(" count makes the run slower, if you want the final result only leave it as false")
       println(" ")
 
@@ -81,31 +78,28 @@ object Main {
       input1 = "datasets/dbpediaOnlyAppleobjects.nt"
       input2 = "datasets/yagoonlyAppleobjects.nt"
       input3 = "1"
-      input4 = "datasets/output"
+      input4 = "false"
       input5 = "false"
-      input6 = "false"
 
     }
     println("Selected run configuration is as below")
     println("KB1: " + input1)
     println("KB2: " +input2)
     println("Experiment number: " + input3)
-    println("Output directory: " + input4)
-    println("To RunWordNetWithRDD(with out collection) " + input5)
-    println("To show counts of dataset and their pairs(it will be time consuming on big dataset): " + input6)
+    println("To RunWordNetWithRDD(with out collection) " + input4)
+    println("To show counts of dataset and their pairs(it will be time consuming on big dataset): " + input5)
     var RunWordNetWithRDD = false
     var RunWithCountCommands = false
-    if(input5 == "false" ){
+    if(input4 == "false" ){
       RunWordNetWithRDD = false
-    } else  if(input5 == "true"){
+    } else  if(input4 == "true"){
       RunWordNetWithRDD = true
     }
-    if(input6 == "false" ){
+    if(input5 == "false" ){
       RunWithCountCommands = false
-    } else if(input6 == "true"){
+    } else if(input5 == "true"){
       RunWithCountCommands = true
     }
-    var outputDir = input4
     // val input2 = "datasets/dbpediamapping5k.nt"  //dbpedia-3-9-mappingbased_properties_en
     //  val input1 = "datasets/yagofact5k.nt"
 
@@ -274,7 +268,7 @@ object Main {
         println("Compression Ration in predicates merging = " + compresionRatio + "%")
       } else {
         val similarPredicates = preSim.matchPredicatesByWordNetRDD(predicatesWithoutURIs1, predicatesWithoutURIs2)
-        similarPredicates.saveAsTextFile(outputDir+ "/predicates")
+        //similarPredicates.saveAsTextFile(outputDir+ "/predicates")
         if (RunWithCountCommands) {
           var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count() + predicatesWithoutURIs2.count(), similarPredicates.count())
           println("Compression Ration in predicates merging = " + compresionRatio + "%")
@@ -305,7 +299,7 @@ object Main {
       if (!RunWordNetWithRDD) {
         //this creates array:
         val similarLiteralEntities = entSim.matchLiteralEntitiesByWordNet(literalObjects1, literalObjects2)
-        similarLiteralEntities.take(similarLiteralEntities.length).foreach(println(_))
+        //similarLiteralEntities.take(similarLiteralEntities.length).foreach(println(_))
 
         var eval: Evaluation = new Evaluation()
         // this works with array similarLiteralEntities
@@ -315,7 +309,7 @@ object Main {
         }
       }else{
           val similarLiteralEntities = entSim.matchLiteralEntitiesByWordNetRDD(literalObjects1, literalObjects2)
-          similarLiteralEntities.saveAsTextFile(outputDir+ "/litEntites")
+          //similarLiteralEntities.saveAsTextFile(outputDir+ "/litEntites")
 
         if(RunWithCountCommands) {
           val compressionRatio2 = eval.compressionRatio(literalObjects1.count() + literalObjects2.count(), similarLiteralEntities.count())
@@ -352,7 +346,7 @@ object Main {
       if (!RunWordNetWithRDD) {
         //this creates array:
         val similarEntities = subSim.matchLiteralEntitiesByWordNet(entitiy1, entitiy2)
-        similarEntities.take(similarEntities.length).foreach(println(_))
+        //similarEntities.take(similarEntities.length).foreach(println(_))
 
         // this works with array of similarEntities
         if(RunWithCountCommands) {
@@ -361,7 +355,7 @@ object Main {
         }
       }else{
         val similarEntities = subSim.matchLiteralEntitiesByWordNetRDD(entitiy1,entitiy2)
-        similarEntities.saveAsTextFile(outputDir + "/nonlitEntites")
+        //similarEntities.saveAsTextFile(outputDir + "/nonlitEntites")
         if(RunWithCountCommands) {
           val compressionRatio3 = eval.compressionRatio(entitiy1.count() + entitiy2.count(), similarEntities.count())
           println("Compression Ratio in non-literal Entities merging = " + compressionRatio3 + "%")
