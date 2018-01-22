@@ -38,6 +38,8 @@ object Main {
   var input2 = ""
   var input3 = ""
   var input4 = "false"
+  var input5 = "false"
+
   def main(args: Array[String]) = {
     println("Comparing knowledge graphs")
 
@@ -46,15 +48,26 @@ object Main {
       input2 = args(1)
       input3 = args(2)
       input4 = args(3)
+      input5 = args(4)
+
+
     } else {
+      println("Arg 1 and 2 are paths:")
       println("Please give path to the two files that contains the dataset in N-Triples format and the experiment number")
       println("Otherwise it reads from default example data sets.")
+      println(" ")
+      println("Arg 3 is the experiment number")
       println("Experiment number 0: third ar General info of the two datasets.")
       println("Experiment number 1: Getting similarity between predicates")
       println("Experiment number 2: Getting similarity between literal entities")
       println("Experiment number 3: Getting similarity between non-literal (called source in jena definition) entities (Subjects and objects)")
-      println("Input 4 sets the WordNet similarity to produce RDD if be true and to array if be false")
-      println("the default value is false ")
+      println(" ")
+      println("Arg 4 is to Not to use collect on the main calculation")
+      println("By that input 4 sets the WordNet similarity to produce RDD instead of array if arg4 is true")
+      println("the default value is false. so to use collect but it requires a lot of RAM on the driver program")
+      println(" ")
+      println("Arg 5 is to call count() and print info of KGs (like number of literals . predicates etc)")
+      println(" count makes the run slower, if you want the final result only leave it as false")
       println(" ")
 
       println("There is no given argument. For example you can give:")
@@ -62,17 +75,26 @@ object Main {
       input2 = "datasets/yagoonlyAppleobjects.nt"
       input3 = "1"
       input4 = "false"
+      input5 = "false"
+
     }
     println("Selected run configuration is as below")
     println("KB1: " + input1)
     println("KB2: " +input2)
     println("Experiment number: " + input3)
     println("To RunWordNetWithRDD(with out collection) " + input4)
+    println("To show counts of dataset and their pairs(it will be time consuming on big dataset): " + input5)
     var RunWordNetWithRDD = false
+    var RunWithCountCommands = false
     if(input4 == "false" ){
       RunWordNetWithRDD = false
     } else{
       RunWordNetWithRDD = true
+    }
+    if(input5 == "false" ){
+      RunWithCountCommands = false
+    } else{
+      RunWithCountCommands = true
     }
     // val input2 = "datasets/dbpediamapping5k.nt"  //dbpedia-3-9-mappingbased_properties_en
     //  val input1 = "datasets/yagofact5k.nt"
@@ -252,15 +274,16 @@ object Main {
       val literalObjects1 = triplesRDD1.filter(_.getObject.isLiteral).map(_.getObject.getLiteralValue.toString).distinct()
       val literalObjects2 = triplesRDD2.filter(_.getObject.isLiteral).map(_.getObject.getLiteralValue.toString).distinct()
 
+      if(RunWithCountCommands) {
+        println("Literal entities (without URI) in KG1 are " + literalObjects1.count())
 
-      println("Literal entities (without URI) in KG1 are " + literalObjects1.count())
-      literalObjects1.distinct().take(5).foreach(println)
-      println("First literal entity " + literalObjects1.take(literalObjects1.count().toInt).apply(0))
+        literalObjects1.distinct().take(5).foreach(println)
+        println("First literal entity " + literalObjects1.take(literalObjects1.count().toInt).apply(0))
+        println("Literal entities (without URI) in KG2 are " + literalObjects2.count()) //81
 
-      println("Literal entities (without URI) in KG2 are " + literalObjects2.count()) //81
-      literalObjects2.distinct().take(5).foreach(println)
-      println("First literal entity" + literalObjects2.first())
-
+        literalObjects2.distinct().take(5).foreach(println)
+        println("First literal entity" + literalObjects2.first())
+      }
       val entSim = new EntitiesSimilarity(sparkSession.sparkContext)
       var eval: Evaluation = new Evaluation()
       if (!RunWordNetWithRDD) {
@@ -268,13 +291,16 @@ object Main {
         val similarLiteralEntities = entSim.matchLiteralEntitiesByWordNet(literalObjects1, literalObjects2)
         var eval: Evaluation = new Evaluation()
         // this works with array similarLiteralEntities
-        val compressionRatio2 = eval.compressionRatio(literalObjects1.count() + literalObjects2.count(), similarLiteralEntities.length)
-        println("Compression Ration in literal entities merging = " + compressionRatio2 + "%")
-
+        if(RunWithCountCommands) {
+          val compressionRatio2 = eval.compressionRatio(literalObjects1.count() + literalObjects2.count(), similarLiteralEntities.length)
+          println("Compression Ration in literal entities merging = " + compressionRatio2 + "%")
+        }
       }else{
-        val similarLiteralEntities = entSim.matchLiteralEntitiesByWordNetRDD(literalObjects1, literalObjects2)
-        val compressionRatio2 = eval.compressionRatio(literalObjects1.count()+literalObjects2.count(), similarLiteralEntities.count())
-        println("Compression Ration in literal entities merging = " + compressionRatio2 + "%")
+          val similarLiteralEntities = entSim.matchLiteralEntitiesByWordNetRDD(literalObjects1, literalObjects2)
+        if(RunWithCountCommands) {
+          val compressionRatio2 = eval.compressionRatio(literalObjects1.count() + literalObjects2.count(), similarLiteralEntities.count())
+          println("Compression Ration in literal entities merging = " + compressionRatio2 + "%")
+        }
       }
 
 
@@ -291,14 +317,15 @@ object Main {
       val entitiy1 = objects1 ++ subjects1
       val entitiy2 = objects2 ++ subjects2
 
-      println("Entities (with URI) in KG1 are " + entitiy1.count())
-      entitiy1.distinct().take(5).foreach(println)
-      println("First literal entity " + entitiy1.take(entitiy1.count().toInt).apply(0))
+      if(RunWithCountCommands) {
+        println("Entities (with URI) in KG1 are " + entitiy1.count())
+        entitiy1.distinct().take(5).foreach(println)
+        println("First literal entity " + entitiy1.take(entitiy1.count().toInt).apply(0))
 
-      println("Entities (with URI) in KG2 are " + entitiy2.count()) //81
-      entitiy2.distinct().take(5).foreach(println)
-      println("First literal entity" + entitiy2.first())
-
+        println("Entities (with URI) in KG2 are " + entitiy2.count()) //81
+        entitiy2.distinct().take(5).foreach(println)
+        println("First literal entity" + entitiy2.first())
+      }
       val subSim = new EntitiesSimilarity(sparkSession.sparkContext)
       var eval: Evaluation = new Evaluation()
 
@@ -306,12 +333,16 @@ object Main {
         //this creates array:
         val similarEntities = subSim.matchLiteralEntitiesByWordNet(entitiy1, entitiy2)
         // this works with array of similarEntities
-        val compressionRatio3 = eval.compressionRatio(entitiy1.count() + entitiy2.count(), similarEntities.length)
-        println("Compression Ratio in non-literal Entities merging = " + compressionRatio3 + "%")
+        if(RunWithCountCommands) {
+          val compressionRatio3 = eval.compressionRatio(entitiy1.count() + entitiy2.count(), similarEntities.length)
+          println("Compression Ratio in non-literal Entities merging = " + compressionRatio3 + "%")
+        }
       }else{
         val similarEntities = subSim.matchLiteralEntitiesByWordNetRDD(entitiy1,entitiy2)
-        val compressionRatio3 = eval.compressionRatio(entitiy1.count()+entitiy2.count(),similarEntities.count())
-        println("Compression Ratio in non-literal Entities merging = " + compressionRatio3 + "%")
+        if(RunWithCountCommands) {
+          val compressionRatio3 = eval.compressionRatio(entitiy1.count() + entitiy2.count(), similarEntities.count())
+          println("Compression Ratio in non-literal Entities merging = " + compressionRatio3 + "%")
+        }
       }
     }
     sparkSession.stop
