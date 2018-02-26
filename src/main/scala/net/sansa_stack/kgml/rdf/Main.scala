@@ -77,7 +77,7 @@ object Main {
       input1 = "datasets/dbpediaOnlyAppleobjects.nt"
       input2 = "datasets/yagoonlyAppleobjects.nt"
       input3 = "1"
-      input4 = "false"
+      input4 = "true"
       input5 = "false"
 
     }
