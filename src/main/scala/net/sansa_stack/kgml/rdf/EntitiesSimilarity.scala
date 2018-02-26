@@ -55,13 +55,15 @@ class EntitiesSimilarity(sc : SparkContext) {
 
     // removing in deployment: println("Number of entities after join " + JoindEntities.count())
 
+    //mapPartition
     val similarPairsRdd = JoindEntities.
       map(x => (x._1, x._2, similarityHandler.jaccardLiteralSimilarityWithWordNet(x._1, x._2)))
 
-    val sameEntities = similarPairsRdd.filter(x => x._3 >= similarityThreshold)
+    val sameEntities: RDD[(String, String, Double)] = similarPairsRdd.filter(x => x._3 >= similarityThreshold)
     // removing in deployment: println("Entities with similarity >"+similarityThreshold +" are: "+ sameEntities.count())
 
-    sameEntities.foreach(println(_))
+    sameEntities.saveAsTextFile("/Users/afshin/Downloads/outputtest.txt")
+    //sameEntities.coalesce(1).saveAsTextFile("ss")
 
     sameEntities
   }

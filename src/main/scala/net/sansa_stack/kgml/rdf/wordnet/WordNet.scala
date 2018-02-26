@@ -5,7 +5,7 @@
  *  Afshin Sadeghi
  */
 
-// based on original source: https://github.com/sujitpal/scalcium
+// based on original source: https://github.com/sujitpal/scalcium (APACHE 2 licenced)
 // - Made the package serializable
 
 
