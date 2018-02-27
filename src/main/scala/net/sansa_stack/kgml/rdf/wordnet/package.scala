@@ -1,8 +1,10 @@
 package net.sansa_stack.kgml.rdf
 
+import java.io.Serializable
+
 import net.didion.jwnl.data.POS
 
-package object wordnet {
+package object wordnet extends Serializable{
   type Synset = net.didion.jwnl.data.Synset
   type POS    = net.didion.jwnl.data.POS
 

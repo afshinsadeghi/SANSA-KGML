@@ -4,13 +4,17 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import org.apache.spark.serializer.KryoRegistrator
+import com.esotericsoftware.kryo.Kryo
+
 
 import org.apache.spark.serializer.{ KryoRegistrator => SparkKryoRegistrator }
 /*
 * Created by Shimaa
 *
 * */
-
+/*
+ * Class for serialization by the Kryo serializer.
+ */
 
 class UnmodifiableCollectionKryoRegistrator extends KryoRegistrator  {
 
@@ -34,6 +38,8 @@ class Registrator extends SparkKryoRegistrator {
     kryo.register(classOf[edu.cmu.lti.ws4j.impl.Lesk])
     kryo.register(classOf[net.sansa_stack.kgml.rdf.PredicatesSimilarity])
     kryo.register(classOf[net.sansa_stack.kgml.rdf.SimilarityHandler])
-
+    kryo.register(classOf[edu.cmu.lti.ws4j.impl.JiangConrath])
+    kryo.register(classOf[edu.cmu.lti.ws4j.impl.LeacockChodorow])
   }
 }
+
