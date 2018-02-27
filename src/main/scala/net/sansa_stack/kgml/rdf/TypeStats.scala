@@ -30,7 +30,7 @@ class TypeStats {
 
 //finding those subjects that has no type
     var pairTriplesOnSubject = triplesRDD1.map(x => (x.getSubject(), x ))
-    pairTriplesOnSubject.filter(_._2)
+    //pairTriplesOnSubject.filter(_._2)
 
   }
 
