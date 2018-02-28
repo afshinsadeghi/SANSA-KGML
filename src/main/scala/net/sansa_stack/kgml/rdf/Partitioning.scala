@@ -13,13 +13,13 @@ class Partitioning {
 
     Predicates1.take(5).foreach(println)
 
-    val tunedPartitioner = new RangePartitioner(8, Predicates1.union(Predicates2))
+    val tunedPartitioner = new RangePartitioner(8, Predicates1)
     println("tunedPartitioner "+ tunedPartitioner + tunedPartitioner.toString+ tunedPartitioner.numPartitions)
 
-    val partitioned = Predicates1.union(Predicates2).partitionBy(tunedPartitioner).persist()
+    val partitioned = Predicates1.partitionBy(tunedPartitioner).persist()
     println("Number of partitions"+ partitioned.getNumPartitions)
     partitioned.take(10).foreach(println)
-    
+
 
 
 
