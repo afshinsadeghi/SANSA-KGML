@@ -150,30 +150,30 @@ import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
     * @param unionRelationIDs
     * @return
     */
-  def matchPredicatesByWordNet(unionRelationIDs : RDD[(String, Long)]): RDD[(String, Long, String, Long)] = {
-    // take last section of uri strings
-    // apply a WordNet measurement on all pairs
-    // replace those that are equal
-
-   // var editedPredica
-   // tes = unionRelationIDs.map(line => (line._1.split("/").last.toLowerCase,
-     // line._2, line._1, line._2))
-    val similarityHandler = new SimilarityHandler(0.7)
-
-    var editedPredicates = unionRelationIDs.map(line => (line._1.split("/").last.toLowerCase, line._2))
-
-
-    val predicateBC =  cs.broadcast(editedPredicates.collect())
-    val similarPairsRdd = editedPredicates.flatMap(x =>
-      predicateBC.value.filter(y => similarityHandler.arePredicatesEqual(x._1,y._1))
-        .map(y => (x,y)))
-    similarPairsRdd.take(10).foreach(println(_))
-
-
-    val similarPairsRddTest = editedPredicates.map(line => (line._1, line._2, line._1, line._2))
-
-  similarPairsRddTest
-  }
+//  def matchPredicatesByWordNet(unionRelationIDs : RDD[(String, Long)]): RDD[(String, Long, String, Long)] = {
+//    // take last section of uri strings
+//    // apply a WordNet measurement on all pairs
+//    // replace those that are equal
+//
+//   // var editedPredica
+//   // tes = unionRelationIDs.map(line => (line._1.split("/").last.toLowerCase,
+//     // line._2, line._1, line._2))
+//    val similarityHandler = new SimilarityHandler(0.7)
+//
+//    var editedPredicates = unionRelationIDs.map(line => (line._1.split("/").last.toLowerCase, line._2))
+//
+//
+//    val predicateBC =  cs.broadcast(editedPredicates.collect())
+//    val similarPairsRdd = editedPredicates.flatMap(x =>
+//      predicateBC.value.filter(y => similarityHandler.arePredicatesEqual(x._1,y._1))
+//        .map(y => (x,y)))
+//    similarPairsRdd.take(10).foreach(println(_))
+//
+//
+//    val similarPairsRddTest = editedPredicates.map(line => (line._1, line._2, line._1, line._2))
+//
+//  similarPairsRddTest
+//  }
 
   val pruneURI = (uri : String) => uri.split("/").last.toLowerCase
 
