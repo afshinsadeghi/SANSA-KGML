@@ -88,8 +88,8 @@ class TypeStats(sparkSession : SparkSession) {
     typedSubjectCount.show(40, 40)
 
 
-   // println("Number of subjects with no type")
-   // val notTypedSubjectCount = sparkSession.sql( "select subject, count( DISTINCT subject) from triple t1 WHERE NOT EXISTS ( SELECT 1 FROM triple t2  WHERE t1.subject = t2.subject AND t2.predicate = '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>') group by subject UNION ALL SELECT * " )
-   // notTypedSubjectCount.show(40, 60)
+   println("Number of subjects with no type")
+   val notTypedSubjectCount = sparkSession.sql( "Select Count(*) from ( select distinct subject from triple t1 WHERE NOT EXISTS ( SELECT 1 FROM triple t2  WHERE t1.subject = t2.subject AND t2.predicate = '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>') group by subject)" )
+   notTypedSubjectCount.show(40, 60)
   }
 }
