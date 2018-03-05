@@ -6,8 +6,8 @@
 	<groupId>net.sansa-stack</groupId>
 	<version>0.2.0</version>
 
-	<name>SANSA-WORDNET-Maven-Spark</name>
-	<description>SANSA based distributed wordnet within Spark</description>
+	<name>SANSA-Matching-Maven-Spark</name>
+	<description>SANSA based distributed matching within Spark</description>
 	<organization>
 		<name>Smart Data Analytics (SDA) Research Group</name>
 		<url>http://sda.tech/</url>
@@ -28,11 +28,11 @@
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<scala.version>2.11.8</scala.version>
+		<scala.version>2.11.11</scala.version>
 		<scala.binary.version>2.11</scala.binary.version>
 		<spark.version>2.1.1</spark.version>
-		<sansa.version>0.2.0</sansa.version>
-		<jena.version>3.1.1</jena.version>
+		<sansa.version>0.3.1-SNAPSHOT</sansa.version>
+		<jena.version>3.5.0</jena.version>
 	</properties>
 
 	<dependencies>
