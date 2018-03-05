@@ -54,9 +54,9 @@ object TestWordNetSimilarityMeasures {
     Console.println(dogCatResSimilarity)
     Console.println(">>> hit.res_similarity(slap)")
 
-    Console.println(">>> dog.jcn_similarity(cat)")
-    val dogCatJcnSimilarity = wn.jcnSimilarity(dog, cat)
-    Console.println(dogCatJcnSimilarity)
+//    Console.println(">>> dog.jcn_similarity(cat)")
+//    val dogCatJcnSimilarity = wn.jcnSimilarity(dog, cat)
+//    Console.println(dogCatJcnSimilarity)
 
     Console.println(">>> dog.lin_similarity(cat)")
     val dogCatLinSimilarity = wn.linSimilarity(dog, cat)

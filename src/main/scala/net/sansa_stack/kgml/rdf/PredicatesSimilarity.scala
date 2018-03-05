@@ -1,12 +1,7 @@
 package net.sansa_stack.kgml.rdf
 
-import org.apache.spark.rdd.RDD
-import org.apache.jena.graph
-import org.apache.jena.graph.{Node, Node_URI, Triple}
-import org.apache.jena.riot.{Lang, RDFDataMgr}
 import org.apache.spark.SparkContext
-import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry}
-import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
+import org.apache.spark.rdd.RDD
 /*
 * Created by Shimaa
 *
@@ -30,7 +25,9 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
     val similarityThreshold = 0.4
     val similarityHandler = new SimilarityHandler(similarityThreshold)
 
+
     println("##########\n")
+
 
     /*val pairsPredicates1 = Predicates1.zipWithIndex.map((x) =>(x._2, x._1))
     println("Number of predicates in first KG " + pairsPredicates1.count()) //313
@@ -84,6 +81,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
     val similarityThreshold = 0.4
     val similarityHandler = new SimilarityHandler(similarityThreshold)
 
+
     println("##########")
     val JoindPredicates: RDD[(String,String)] = Predicates1.cartesian(Predicates2)
     // removing in deployment: println("Number of paired predicates after join " + JoindPredicates.count()) //25353
@@ -102,7 +100,7 @@ class PredicatesSimilarity(sc : SparkContext) extends Serializable{
   //prints all the similar predicates
  // samePredicates.foreach(println(_))
 
-    samePredicates.saveAsTextFile("/Users/afshin/Downloads/outputtest.txt")
+    samePredicates.saveAsTextFile("~/Downloads/outputTest.txt")
 
     samePredicates
   }

@@ -35,6 +35,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
     } else {
 
       similarity = getMeanWordNetVerbOrNounSimilarity(string1, string2)
+      //var similarity = 0.0
     }
 
     similarity

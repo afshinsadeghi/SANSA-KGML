@@ -4,30 +4,11 @@ package net.sansa_stack.kgml.rdf
   * Created by afshin on 10.10.17.
   */
 
-import java.io.{ByteArrayInputStream, File, PrintWriter}
 import java.net.URI
 
-import breeze.linalg.max
-import com.sun.rowset.internal.Row
-import net.didion.jwnl.data.POS
-import net.sansa_stack.kgml.rdf.wordnet.WordNet
-
-import scala.collection.{immutable, mutable}
-import org.apache.spark.sql.{Row, SparkSession}
 import net.sansa_stack.rdf.spark.io.NTripleReader
-import net.sansa_stack.rdf.spark.model.{JenaSparkRDD, JenaSparkRDDOps}
 import net.sansa_stack.rdf.spark.model.TripleRDD._
-import net.sansa_stack.rdf.spark.model.JenaSparkRDD
-import org.aksw.jena_sparql_api.utils.Triples
-import org.apache.jena.graph
-import org.apache.jena.graph.{Node, Node_URI}
-import org.apache.jena.riot.{Lang, RDFDataMgr}
-import org.apache.spark.SparkContext
-import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry}
-import org.apache.spark.rdd.{PairRDDFunctions, RDD, RDDOperationScope}
-import net.didion.jwnl.data.POS
-
-import scala.collection.JavaConverters._
+import org.apache.spark.sql.SparkSession
 
 /*
     This object is for merging KBs and making unique set of predicates in two KBs
@@ -77,7 +58,7 @@ object Main {
       input1 = "datasets/dbpediaOnlyAppleobjects.nt"
       input2 = "datasets/yagoonlyAppleobjects.nt"
       input3 = "1"
-      input4 = "true"
+      input4 = "false" // defauls is true
       input5 = "false"
 
     }
@@ -240,7 +221,12 @@ object Main {
 
       //Getting the predicates without URIs
       val predicatesWithoutURIs1 = triplesRDD1.map(_.getPredicate.getLocalName).distinct() //.zipWithIndex()
+      val predicatesWithKeys1 = triplesRDD1.map(_.getPredicate.getLocalName).distinct().zipWithIndex()
+
       val predicatesWithoutURIs2 = triplesRDD2.map(_.getPredicate.getLocalName).distinct() //.zipWithIndex()
+      val predicatesWithKeys2 = triplesRDD2.map(_.getPredicate.getLocalName).distinct().zipWithIndex()
+
+
       if (RunWithCountCommands) {
         println("Predicates without URI in KG1 are " + predicatesWithoutURIs1.count()) //313
         predicatesWithoutURIs1.distinct().take(5).foreach(println)
@@ -251,6 +237,9 @@ object Main {
         println("first predicate " + predicatesWithoutURIs2.first())
         //println("first predicate "+ predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(1))
       }
+
+      var partitions = new Partitioning()
+      partitions.predicatesPartitioningByKey(predicatesWithKeys1, predicatesWithKeys2)
 
       //############################ Getting similarity between predicates ####################################
       println("//############################ Getting similarity between predicates ####################################")
@@ -265,6 +254,7 @@ object Main {
         // this works with array similarPredicates:
         var compresionRatio = eval.compressionRatio(predicatesWithoutURIs1.count() + predicatesWithoutURIs2.count(), similarPredicates.length)
         println("Compression Ration in predicates merging = " + compresionRatio + "%")
+
       } else {
         val similarPredicates = preSim.matchPredicatesByWordNetRDD(predicatesWithoutURIs1, predicatesWithoutURIs2)
         //similarPredicates.saveAsTextFile(outputDir+ "/predicates")
