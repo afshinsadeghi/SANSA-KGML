@@ -83,11 +83,10 @@ object ModuleExecutor {
     val df1= DF1.toDF("Subject1","Predicate1","Object1")
     val df2= DF2.toDF("Subject2","Predicate2","Object2")
 
-    import org.apache.spark.sql.expressions.Window
 //    df1.take(10).foreach(println)
 //    val predicatesWithKeys1 = df1.map(_.getPredicate.getLocalName).distinct().zipWithIndex()
-    val predicateDF1 = df1.select("Predicate").distinct()
-    val predicateDF2 = df2.select("Predicate").distinct()
+    val predicateDF1 = df1.select("Predicate1").distinct()
+    val predicateDF2 = df2.select("Predicate2").distinct()
 
     var partitions = new Partitioning()
     partitions.predicatesDFPartitioningByKey(predicateDF1, predicateDF2)
