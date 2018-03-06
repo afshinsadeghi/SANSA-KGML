@@ -8,6 +8,8 @@ import org.apache.spark.sql.{DataFrame, Dataset}
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
+import org.apache.spark.sql.expressions.Window
+import org.apache.spark.sql.functions._
 
 case class StringTriples(Subject: String, Predicate: String, Object: String)
 
@@ -35,9 +37,11 @@ object ModuleExecutor {
     } else {
       println("module name to run is not set. running with default values:")
 
-      input1 = "TypeStats"
-      //input2 = "datasets/dbpediamapping5k.nt"
-      //input3 = "datasets/yagofact5k.nt"
+      println("current modules are: TypeStats,CommonTypes,RankByType")
+
+      input1 = "RankByType"
+      //input2 = "datasets/dbpediamapping50k.nt"
+      //input3 = "datasets/yagofact50k.nt"
       input2 = "datasets/dbpediaOnlyAppleobjects.nt"
       input3 = "datasets/yagoonlyAppleobjects.nt"
     }
@@ -76,13 +80,20 @@ object ModuleExecutor {
       .schema(stringSchema)
       .load(input3)
 
-    val df1= DF1.toDF("Subject","Predicate","Object")
-    val df2= DF2.toDF("Subject","Predicate","Object")
+    val df1= DF1.toDF("Subject1","Predicate1","Object1")
+    val df2= DF2.toDF("Subject2","Predicate2","Object2")
 
+    import org.apache.spark.sql.expressions.Window
 
+    //removing duplicates
+    df1.createTempView("x")
+    sparkSession.sql("SELECT subject1, predicate1, object1  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject1 ORDER BY subject1 DESC) rn FROM x) predicate1 WHERE rn = 1").collect
 
-   // val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input3))
+    //removing duplicates
+    df2.createOrReplaceTempView("x")
+    sparkSession.sql("SELECT subject2, predicate2, object2  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject2 ORDER BY subject2 DESC) rn FROM x) predicate2 WHERE rn = 1").collect
 
+    // val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input3))
     // val df2: DataFrame = triplesRDD2.toDF this does not work so we read it as dataframe from begining
 
     if (input1 == "TypeStats") {
@@ -92,7 +103,18 @@ object ModuleExecutor {
       println("Stats of dataset 1...")
       typeStats.calculateDFStats(df1)
       println("Stats of dataset 2...")
+      val df2= DF2.toDF("Subject1","Predicate1","Object1")
       typeStats.calculateDFStats(df2)
+    }
+
+    if (input1 == "CommonTypes") {
+      val typeStats = new net.sansa_stack.kgml.rdf.TypeStats(sparkSession)
+      typeStats.getMaxCommonTypes(df1, df2)
+    }
+
+    if (input1 == "RankByType") {
+      val typeStats = new net.sansa_stack.kgml.rdf.TypeStats(sparkSession)
+      typeStats.RankDFSubjectsByType(df1, df2)
     }
 
     println("end of running Module executor.")
