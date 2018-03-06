@@ -1,11 +1,5 @@
 package net.sansa_stack.kgml.rdf
 
-import java.net.URI
-
-import net.sansa_stack.rdf.spark.io.NTripleReader
-import org.apache.spark
-import org.apache.spark.sql.{DataFrame, Dataset}
-
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
@@ -78,6 +72,15 @@ object ModuleExecutor {
 
     val df1= DF1.toDF("Subject","Predicate","Object")
     val df2= DF2.toDF("Subject","Predicate","Object")
+
+//    df1.take(10).foreach(println)
+//    val predicatesWithKeys1 = df1.map(_.getPredicate.getLocalName).distinct().zipWithIndex()
+    val predicateDF1 = df1.select("Predicate").distinct()
+    val predicateDF2 = df2.select("Predicate").distinct()
+
+    var partitions = new Partitioning()
+    partitions.predicatesDFPartitioningByKey(predicateDF1, predicateDF2)
+
 
 
 
