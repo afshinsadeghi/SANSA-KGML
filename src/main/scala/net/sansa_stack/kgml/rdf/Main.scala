@@ -240,7 +240,7 @@ object Main {
       }
 
       var partitions = new Partitioning()
-      partitions.predicatesPartitioningByKey(predicatesWithKeys1, predicatesWithKeys2)
+     // partitions.predicatesPartitioningByKey(predicatesWithKeys1, predicatesWithKeys2)
 
       //############################ Getting similarity between predicates ####################################
       println("//############################ Getting similarity between predicates ####################################")
