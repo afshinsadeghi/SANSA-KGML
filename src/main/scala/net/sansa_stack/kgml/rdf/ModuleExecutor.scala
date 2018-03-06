@@ -3,8 +3,13 @@ package net.sansa_stack.kgml.rdf
 import java.net.URI
 
 import net.sansa_stack.rdf.spark.io.NTripleReader
-import org.apache.spark.sql.SparkSession
+import org.apache.spark
+import org.apache.spark.sql.{DataFrame, Dataset}
 
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
+
+case class StringTriples(Subject: String, Predicate: String, Object: String)
 
 /**
   * Created by Afshin on 22.02.18.
@@ -28,32 +33,69 @@ object ModuleExecutor {
       }
 
     } else {
-      println("please specify module name to run. running with default values")
+      println("module name to run is not set. running with default values:")
 
       input1 = "TypeStats"
-      input2 = "datasets/dbpediamapping5k.nt"
-      input3 = "datasets/yagofact5k.nt"
+      //input2 = "datasets/dbpediamapping5k.nt"
+      //input3 = "datasets/yagofact5k.nt"
+      input2 = "datasets/dbpediaOnlyAppleobjects.nt"
+      input3 = "datasets/yagoonlyAppleobjects.nt"
     }
+    println(input1)
+    println(input2)
+    println(input3)
 
     val sparkSession = SparkSession.builder
       .master("local[*]")
       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .config("spark.kryoserializer.buffer.max", "1024")
-      .config("spark.kryo.registrator", "net.sansa_stack.kgml.rdf.Registrator")
       .appName("Triple merger of " + input1 + " and " + input2 + " ")
       .getOrCreate()
 
-    val triplesRDD1 = NTripleReader.load(sparkSession, URI.create(input2)) // RDD[Triple]
-    val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input3))
 
-    if (input1 == "TypeStats"){
+    //val triplesRDD1 = NTripleReader.load(sparkSession, URI.create(input2)) // RDD[Triple]
 
-      val typeStats = new net.sansa_stack.kgml.rdf.TypeStats()
-      typeStats.calculateStats(triplesRDD1, triplesRDD2)
 
-      println("end of running Module executor.")
+    val stringSchema = StructType(Array(
+      StructField("Subject", StringType, true),
+      StructField("Predicate", StringType, true),
+      StructField("Object", StringType, true)))
+
+    val DF1 = sparkSession.read.format("com.databricks.spark.csv")
+      .option("header", "false")
+      .option("inferSchema", false)
+      .option("delimiter", "\t")
+      .schema(stringSchema)
+      .load(input2)
+
+
+    val DF2 = sparkSession.read.format("com.databricks.spark.csv")
+      .option("header", "false")
+      .option("inferSchema", false)
+      .option("delimiter", "\t")
+      .schema(stringSchema)
+      .load(input3)
+
+    val df1= DF1.toDF("Subject","Predicate","Object")
+    val df2= DF2.toDF("Subject","Predicate","Object")
+
+
+
+   // val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input3))
+
+    // val df2: DataFrame = triplesRDD2.toDF this does not work so we read it as dataframe from begining
+
+    if (input1 == "TypeStats") {
+
+      val typeStats = new net.sansa_stack.kgml.rdf.TypeStats(sparkSession)
+      //typeStats.calculateStats(triplesRDD1, triplesRDD2)
+      println("Stats of dataset 1...")
+      typeStats.calculateDFStats(df1)
+      println("Stats of dataset 2...")
+      typeStats.calculateDFStats(df2)
     }
 
+    println("end of running Module executor.")
 
     sparkSession.stop
   }
