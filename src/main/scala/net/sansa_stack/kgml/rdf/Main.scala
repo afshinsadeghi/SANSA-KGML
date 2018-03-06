@@ -100,6 +100,7 @@ object Main {
     //      .appName("ManchesterSyntaxOWLAxiomsDatasetBuilderTest").master("local[*]").getOrCreate()
 
     val triplesRDD1 = NTripleReader.load(sparkSession, URI.create(input1)) // RDD[Triple]
+
     val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input2))
 
     var makeResult0 = false
