@@ -18,7 +18,6 @@ class Partitioning {
 
     //val tunedPartitioner = new RangePartitioner(8, Predicates1)
     //println("tunedPartitioner "+ tunedPartitioner + tunedPartitioner.toString+ tunedPartitioner.numPartitions)
-
     //val predicate_1_partitioned = Predicates1.partitionBy(tunedPartitioner).persist()
     //val tunedPartitioner = new DomainNamePartitioner(4, Predicates1)
     //val predicate_1_partitioned = Predicates1.partitionBy(new DomainNamePartitioner(4, Predicates1)).persist()
