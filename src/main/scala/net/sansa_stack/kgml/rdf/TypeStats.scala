@@ -15,6 +15,7 @@ import org.apache.spark.sql.functions._
 class TypeStats(sparkSession: SparkSession) {
 
 
+
   /**
     * Returning value of a literal
     */
