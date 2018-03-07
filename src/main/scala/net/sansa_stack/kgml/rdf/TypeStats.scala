@@ -99,7 +99,7 @@ class TypeStats(sparkSession: SparkSession) {
   /**
     * Returning value of a literal
     */
-  val getValue2 = udf((S: String) => S.split("\"")(1))
+  val getValue2 = udf((S: String) =>  {if(S.startsWith("\"") ) S.split("\"")(1) else S})
 
   // Blocking strategy based on types: we take those subject that have the most common types in one partition
 
@@ -141,7 +141,7 @@ class TypeStats(sparkSession: SparkSession) {
        && dF1("literal1") <=> dF2("literal2"))
 
     samePredicateAndObject.createOrReplaceTempView("sameTypes")
-    println("ranking of subjects based on common type")
+    println("ranking of subjects based on common type.(I used common predicate and objects which is more general than common type)")
     val sqlText2 = "SELECT  subject1, subject2, COUNT(*) FROM sameTypes group by subject1,subject2 ORDER BY COUNT(*) DESC"
     val typedTriples2 = sparkSession.sql(sqlText2)
     typedTriples2.show(15, 80)
