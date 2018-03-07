@@ -1,6 +1,5 @@
 package net.sansa_stack.kgml.rdf
 
-import net.sansa_stack.inference.spark.data.model.TripleUtils
 import org.aksw.jena_sparql_api.utils.Triples
 import org.apache.spark.rdd.RDD
 import org.apache.jena.graph.Triple
@@ -14,6 +13,14 @@ import org.apache.spark.sql.functions._
   * Created by Afshin on 22.02.18.
   */
 class TypeStats(sparkSession: SparkSession) {
+
+
+  /**
+    * Returning value of a literal
+    */
+
+  val getValue2 = udf((S: String) =>  {if(S.startsWith("\"") ) S.split("\"")(1) else S})
+
 
   def calculateStats(triplesRDD1: RDD[(Triple)], triplesRDD2: RDD[(Triple)]): Unit = {
 
@@ -97,18 +104,6 @@ class TypeStats(sparkSession: SparkSession) {
   }
 
 
-  /**
-    * Returning value of a literal
-    */
-  val getValue2 = udf((S: String) =>  {if(S.startsWith("\"") ) S.split("\"")(1) else S})
-
-  val getLastPartOfURL = udf((S: String) =>  {
-    if(S.startsWith("<") ){
-      var temp = S.split("<")(1)
-      temp = temp.split(">")(0)
-      temp = temp.split("\\").last
-    }
-     else S})
   // Blocking strategy based on types: we take those subject that have the most common types in one partition
 
   def getMaxCommonTypes(df1: DataFrame, df2: DataFrame): Unit = {
