@@ -18,6 +18,7 @@ class TypeStats(sparkSession: SparkSession) {
   def calculateStats(triplesRDD1: RDD[(Triple)], triplesRDD2: RDD[(Triple)]): Unit = {
 
 
+
     println("Getting types...")
 
     val predicates1 = triplesRDD1.map(_.getPredicate.getLocalName).distinct()

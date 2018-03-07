@@ -39,7 +39,7 @@ object ModuleExecutor {
 
       println("current modules are: TypeStats,CommonTypes,RankByType")
 
-      input1 = "CommonTypes"
+      input1 = "TypeStats"
       //input2 = "datasets/dbpediamapping50k.nt"
       //input3 = "datasets/yagofact50k.nt"
       input2 = "datasets/dbpediaOnlyAppleobjects.nt"
