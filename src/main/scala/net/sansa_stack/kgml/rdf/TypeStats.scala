@@ -1,5 +1,6 @@
 package net.sansa_stack.kgml.rdf
 
+import net.sansa_stack.inference.spark.data.model.TripleUtils
 import org.aksw.jena_sparql_api.utils.Triples
 import org.apache.spark.rdd.RDD
 import org.apache.jena.graph.Triple
