@@ -102,6 +102,13 @@ class TypeStats(sparkSession: SparkSession) {
     */
   val getValue2 = udf((S: String) =>  {if(S.startsWith("\"") ) S.split("\"")(1) else S})
 
+  val getLastPartOfURL = udf((S: String) =>  {
+    if(S.startsWith("<") ){
+      var temp = S.split("<")(1)
+      temp = temp.split(">")(0)
+      temp = temp.split("\\").last
+    }
+     else S})
   // Blocking strategy based on types: we take those subject that have the most common types in one partition
 
   def getMaxCommonTypes(df1: DataFrame, df2: DataFrame): Unit = {
