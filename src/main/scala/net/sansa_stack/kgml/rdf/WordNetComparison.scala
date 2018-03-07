@@ -1,4 +1,5 @@
 package net.sansa_stack.kgml.rdf
+import org.apache.spark.sql.functions._
 
 /**
   * Created by afshin on 07.03.18.
