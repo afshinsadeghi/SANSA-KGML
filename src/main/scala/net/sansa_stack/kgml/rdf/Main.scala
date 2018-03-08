@@ -239,7 +239,7 @@ object Main {
         //println("first predicate "+ predicatesWithoutURIs2.take(predicatesWithoutURIs2.count().toInt).apply(1))
       }
 
-      var partitions = new Partitioning()
+      var partitions = new Partitioning(sparkSession.sparkContext)
      // partitions.predicatesPartitioningByKey(predicatesWithKeys1, predicatesWithKeys2)
 
       //############################ Getting similarity between predicates ####################################

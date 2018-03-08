@@ -83,11 +83,14 @@ class Partitioning (sc : SparkContext){
     
 
 
-
-
     //println("Partitions structure: " +predicate_1_partitioned.glom().collect())
   }
-  def predicatesDFPartitioningByKey(Predicates1 : DataFrame, Predicates2 : DataFrame) = {
+  def predicatesDFPartitioningByKey(df1: DataFrame, df2: DataFrame) = {
+
+    //    df1.take(10).foreach(println)
+    //    val predicatesWithKeys1 = df1.map(_.getPredicate.getLocalName).distinct().zipWithIndex()
+    val Predicates1 = df1.select("Predicate1").distinct()
+    val Predicates2 = df2.select("Predicate2").distinct()
 
     println("Length of predicate 1: "+Predicates1.count())
     println("Length of predicate 2: "+Predicates2.count())

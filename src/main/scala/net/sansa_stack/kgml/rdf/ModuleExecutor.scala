@@ -37,9 +37,9 @@ object ModuleExecutor {
     } else {
       println("module name to run is not set. running with default values:")
 
-      println("current modules are: TypeStats,CommonTypes,RankByType")
+      println("current modules are: TypeStats,CommonTypes,RankByType,PredicateMatching,PredicatePartitioning")
 
-      input1 = "TypeStats"
+      input1 = "PredicateMatching"
       //input2 = "datasets/dbpediamapping50k.nt"
       //input3 = "datasets/yagofact50k.nt"
       input2 = "datasets/dbpediaOnlyAppleobjects.nt"
@@ -83,13 +83,7 @@ object ModuleExecutor {
     val df1= DF1.toDF("Subject1","Predicate1","Object1")
     val df2= DF2.toDF("Subject2","Predicate2","Object2")
 
-//    df1.take(10).foreach(println)
-//    val predicatesWithKeys1 = df1.map(_.getPredicate.getLocalName).distinct().zipWithIndex()
-    val predicateDF1 = df1.select("Predicate1").distinct()
-    val predicateDF2 = df2.select("Predicate2").distinct()
 
-    var partitions = new Partitioning()
-    partitions.predicatesDFPartitioningByKey(predicateDF1, predicateDF2)
 
 
 
@@ -103,6 +97,13 @@ object ModuleExecutor {
 
     // val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input3))
     // val df2: DataFrame = triplesRDD2.toDF this does not work so we read it as dataframe from begining
+
+
+    if (input1 == "PredicatePartitioning") {
+      var partitions = new Partitioning(sparkSession.sparkContext)
+      partitions.predicatesDFPartitioningByKey(df2, df2)
+    }
+
 
     if (input1 == "TypeStats") {
 
@@ -124,6 +125,13 @@ object ModuleExecutor {
       val typeStats = new net.sansa_stack.kgml.rdf.TypeStats(sparkSession)
       typeStats.RankDFSubjectsByType(df1, df2)
     }
+
+
+    if (input1 == "PredicateMatching") {
+      val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
+      matching.getMatchedPredicates(df1, df2)
+    }
+
 
     println("end of running Module executor.")
 
