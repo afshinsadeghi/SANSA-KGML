@@ -27,20 +27,20 @@ class Matching(sparkSession: SparkSession) {
     //1. First filter all predicates in one column dataframes A and B, I expect all fit into memory
     //2. make a cartesian comparison of all them.
 
-    val dF1 = df1.select(df1("predicate1")).distinct
+    val dF1 = df1.select(df1("predicate1")).distinct.coalesce(5)
     //  .withColumn("predicate_ending", getLastPartOfURI(col("object1")))
 
-    val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct)
+    val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5)
     //    .withColumn("predicate_ending", getLastPartOfURI(col("object2")))
 
     val splitDF = dF2.randomSplit(Array(1, 1, 1, 1))
     val (dfs1, dfs2, dfs3, dfs4) = (splitDF(0), splitDF(1), splitDF(2), splitDF(3))
 
 
-    val dfp1 = dfs1.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
-    val dfp2 = dfs2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
-    val dfp3 = dfs3.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
-    val dfp4 = dfs4.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
+    val dfp1 = dfs1.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5)
+    val dfp2 = dfs2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5)
+    val dfp3 = dfs3.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5)
+    val dfp4 = dfs4.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5)
 
     // val dF3 = dF2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
 
@@ -67,7 +67,7 @@ class Matching(sparkSession: SparkSession) {
     val sqlText4 = "SELECT same_predicate, COUNT(*) FROM triple4 group by same_predicate ORDER BY COUNT(*) DESC"
     val dPredicateStats4 = sparkSession.sql(sqlText4)
 
-     val predicates = dPredicateStats1.union(dPredicateStats2).union(dPredicateStats3).union(dPredicateStats4)
+     val predicates = dPredicateStats1.union(dPredicateStats2).union(dPredicateStats3).union(dPredicateStats4).coalesce(5)
     predicates.show(15, 80)
 
 
