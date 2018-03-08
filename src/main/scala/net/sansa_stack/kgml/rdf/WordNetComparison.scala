@@ -33,39 +33,91 @@ class Matching(sparkSession: SparkSession) {
     val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct)
     //    .withColumn("predicate_ending", getLastPartOfURI(col("object2")))
 
-    val dF3 = dF2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
-    // dF3.show()
-    dF3.createOrReplaceTempView("triple")
+    val splitDF = dF2.randomSplit(Array(1, 1, 1, 1))
+    val (dfs1, dfs2, dfs3, dfs4) = (splitDF(0), splitDF(1), splitDF(2), splitDF(3))
 
 
-    val sqlText2 = "SELECT same_predicate, COUNT(*) FROM triple group by same_predicate ORDER BY COUNT(*) DESC"
-    val dPredicateStats = sparkSession.sql(sqlText2)
-    dPredicateStats.show(15, 80)
+    val dfp1 = dfs1.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
+    val dfp2 = dfs2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
+    val dfp3 = dfs3.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
+    val dfp4 = dfs4.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
 
-/*
-       The output for exact string equality :
-   +--------------+--------+
-   |same_predicate|count(1)|
-   +--------------+--------+
-   |         false|   27636|
-   |          true|       3|
-   +--------------+--------+
- */
+    // val dF3 = dF2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
 
-/*
+    //dF3.createOrReplaceTempView("triple")
+
+    dfp1.createOrReplaceTempView("triple1")
+    dfp2.createOrReplaceTempView("triple2")
+    dfp3.createOrReplaceTempView("triple3")
+    dfp4.createOrReplaceTempView("triple4")
+
+    //val sqlText2 = "SELECT same_predicate, COUNT(*) FROM triple group by same_predicate ORDER BY COUNT(*) DESC"
+    //val dPredicateStats = sparkSession.sql(sqlText2)
+    //   dPredicateStats.show(15, 80)
+
+    val sqlText1 = "SELECT same_predicate, COUNT(*) FROM triple1 group by same_predicate ORDER BY COUNT(*) DESC"
+    val dPredicateStats1 = sparkSession.sql(sqlText1)
+
+    val sqlText2 = "SELECT same_predicate, COUNT(*) FROM triple2 group by same_predicate ORDER BY COUNT(*) DESC"
+    val dPredicateStats2 = sparkSession.sql(sqlText2)
+
+    val sqlText3 = "SELECT same_predicate, COUNT(*) FROM triple3 group by same_predicate ORDER BY COUNT(*) DESC"
+    val dPredicateStats3 = sparkSession.sql(sqlText3)
+
+    val sqlText4 = "SELECT same_predicate, COUNT(*) FROM triple4 group by same_predicate ORDER BY COUNT(*) DESC"
+    val dPredicateStats4 = sparkSession.sql(sqlText4)
 
 
-    val sqlText3 = "SELECT predicate1 FROM triple where same_predicate = true"
-    val samePredicates = sparkSession.sql(sqlText3)
-    samePredicates.show(15, 80)
+    dPredicateStats1.write
+      .format("com.databricks.spark.csv")
+      .option("header", "false")
+      .save("/Users/afshin/1")
 
-    The output :
-      <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
-               <http://www.w3.org/2002/07/owl#sameAs>
-         <http://www.w3.org/2000/01/rdf-schema#label>
+    dPredicateStats2.write
+      .format("com.databricks.spark.csv")
+      .option("header", "false")
+      .save("/Users/afshin/1")
 
- */
+    dPredicateStats3.write
+      .format("com.databricks.spark.csv")
+      .option("header", "false")
+      .save("/Users/afshin/1")
+
+    dPredicateStats4.write
+      .format("com.databricks.spark.csv")
+      .option("header", "false")
+      .save("/Users/afshin/1")
+
+    //dPredicateStats1.show(15, 80)
+    //dPredicateStats2.show(15, 80)
+    //dPredicateStats3.show(15, 80)
+    //dPredicateStats4.show(15, 80)
 
 
-}
+    /*
+           The output for exact string equality :
+       +--------------+--------+
+       |same_predicate|count(1)|
+       +--------------+--------+
+       |         false|   27636|
+       |          true|       3|
+       +--------------+--------+
+     */
+
+    /*
+
+
+        val sqlText3 = "SELECT predicate1 FROM triple where same_predicate = true"
+        val samePredicates = sparkSession.sql(sqlText3)
+        samePredicates.show(15, 80)
+
+        The output :
+          <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+                   <http://www.w3.org/2002/07/owl#sameAs>
+             <http://www.w3.org/2000/01/rdf-schema#label>
+
+     */
+
+
+  }
 }
