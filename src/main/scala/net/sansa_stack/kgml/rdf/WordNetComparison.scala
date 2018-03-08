@@ -67,31 +67,9 @@ class Matching(sparkSession: SparkSession) {
     val sqlText4 = "SELECT same_predicate, COUNT(*) FROM triple4 group by same_predicate ORDER BY COUNT(*) DESC"
     val dPredicateStats4 = sparkSession.sql(sqlText4)
 
+     val predicates = dPredicateStats1.union(dPredicateStats2).union(dPredicateStats3).union(dPredicateStats4)
+    predicates.show(15, 80)
 
-    dPredicateStats1.write
-      .format("com.databricks.spark.csv")
-      .option("header", "false")
-      .save("/Users/afshin/1")
-
-    dPredicateStats2.write
-      .format("com.databricks.spark.csv")
-      .option("header", "false")
-      .save("/Users/afshin/1")
-
-    dPredicateStats3.write
-      .format("com.databricks.spark.csv")
-      .option("header", "false")
-      .save("/Users/afshin/1")
-
-    dPredicateStats4.write
-      .format("com.databricks.spark.csv")
-      .option("header", "false")
-      .save("/Users/afshin/1")
-
-    //dPredicateStats1.show(15, 80)
-    //dPredicateStats2.show(15, 80)
-    //dPredicateStats3.show(15, 80)
-    //dPredicateStats4.show(15, 80)
 
 
     /*
