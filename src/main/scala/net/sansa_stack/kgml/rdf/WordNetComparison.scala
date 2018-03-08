@@ -27,20 +27,20 @@ class Matching(sparkSession: SparkSession) {
     //1. First filter all predicates in one column dataframes A and B, I expect all fit into memory
     //2. make a cartesian comparison of all them.
 
-    val dF1 = df1.select(df1("predicate1")).distinct.coalesce(5)
+    val dF1 = df1.select(df1("predicate1")).distinct.coalesce(5).persist()
     //  .withColumn("predicate_ending", getLastPartOfURI(col("object1")))
 
-    val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5)
+    val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
     //    .withColumn("predicate_ending", getLastPartOfURI(col("object2")))
 
     val splitDF = dF2.randomSplit(Array(1, 1, 1, 1))
     val (dfs1, dfs2, dfs3, dfs4) = (splitDF(0), splitDF(1), splitDF(2), splitDF(3))
 
 
-    val dfp1 = dfs1.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5)
-    val dfp2 = dfs2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5)
-    val dfp3 = dfs3.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5)
-    val dfp4 = dfs4.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5)
+    val dfp1 = dfs1.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5).persist()
+    val dfp2 = dfs2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5).persist()
+    val dfp3 = dfs3.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5).persist()
+    val dfp4 = dfs4.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2"))).coalesce(5).persist()
 
     // val dF3 = dF2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
 
