@@ -68,7 +68,7 @@ class Matching(sparkSession: SparkSession) {
     val dPredicateStats4 = sparkSession.sql(sqlText4)
 
      val predicates = dPredicateStats1.union(dPredicateStats2).union(dPredicateStats3).union(dPredicateStats4).coalesce(5)
-    predicates.show(15, 80)
+    println(predicates.collect().take(200))
 
 
 
