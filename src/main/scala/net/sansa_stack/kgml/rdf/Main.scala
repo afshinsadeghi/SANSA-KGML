@@ -57,6 +57,8 @@ object Main {
       println("There is no given argument. For example you can give:")
       input1 = "datasets/dbpediaOnlyAppleobjects.nt"
       input2 = "datasets/yagoonlyAppleobjects.nt"
+//      input1 = "datasets/DBpediaAppleSmalldataset.nt"
+//      input2 = "datasets/YagoAppleSmallDataset.nt"
       input3 = "1"
       input4 = "false" // defauls is true
       input5 = "false"
@@ -240,7 +242,7 @@ object Main {
       }
 
       var partitions = new Partitioning(sparkSession.sparkContext)
-     // partitions.predicatesPartitioningByKey(predicatesWithKeys1, predicatesWithKeys2)
+      partitions.predicatesRDDPartitioningByKey(predicatesWithKeys1, predicatesWithKeys2)
 
       //############################ Getting similarity between predicates ####################################
       println("//############################ Getting similarity between predicates ####################################")
