@@ -20,7 +20,7 @@ class TypeStats(sparkSession: SparkSession) {
     * Returning value of a literal
     */
 
-  val getValue2 = udf((S: String) =>  {if(S.startsWith("\"") ) S.split("\"")(1) else S})
+  val getLiteralValue = udf((S: String) =>  {if(S.startsWith("\"") ) S.split("\"")(1) else S})
 
 
   def calculateStats(triplesRDD1: RDD[(Triple)], triplesRDD2: RDD[(Triple)]): Unit = {
@@ -134,10 +134,10 @@ class TypeStats(sparkSession: SparkSession) {
   def RankDFSubjectsByType(df1: DataFrame, df2: DataFrame): Unit = {
 
     val dF1 = df1.
-      withColumn("Literal1", getValue2(col("object1")))
+      withColumn("Literal1", getLiteralValue(col("object1")))
 
     val dF2 = df2.
-      withColumn("Literal2", getValue2(col("object2")))
+      withColumn("Literal2", getLiteralValue(col("object2")))
 
     dF1.createOrReplaceTempView("triple")
     dF2.createOrReplaceTempView("triple2")
