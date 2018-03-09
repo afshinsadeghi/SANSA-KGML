@@ -13,7 +13,6 @@ class Matching(sparkSession: SparkSession) {
 
     var ending1 = S.split("<")(1).split(">")(0)
     var ending2 = S2.split("<")(1).split(">")(0)
-    ending1.equals(ending2)
     val wordNetSim = new SimilarityHandler(0.7)
     wordNetSim.arePredicatesEqual(ending1, ending2)
   })
@@ -22,7 +21,7 @@ class Matching(sparkSession: SparkSession) {
     if (S.startsWith("\"")) S.split("\"")(1) else S
   })
 
-  def getMatchedPredicates(df1: DataFrame, df2: DataFrame): Unit = {
+  def getMatchedPredicatesWithSplit(df1: DataFrame, df2: DataFrame): Unit = {
 
     //1. First filter all predicates in one column dataframes A and B, I expect all fit into memory
     //2. make a cartesian comparison of all them.
@@ -71,7 +70,35 @@ class Matching(sparkSession: SparkSession) {
     println(predicates.collect().take(200))
 
 
+  }
 
+  def getMatchedPredicates(df1: DataFrame, df2: DataFrame): Unit = {
+
+    //1. First filter all predicates in one column dataframes A and B, I expect all fit into memory
+    //2. make a cartesian comparison of all them.
+
+    val dF1 = df1.select(df1("predicate1")).distinct.coalesce(5).persist()
+    //  .withColumn("predicate_ending", getLastPartOfURI(col("object1")))
+
+    val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
+    //    .withColumn("predicate_ending", getLastPartOfURI(col("object2")))
+
+
+    // val dF3 = dF2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
+
+    //dF3.createOrReplaceTempView("triple")
+
+
+    //val sqlText2 = "SELECT same_predicate, COUNT(*) FROM triple group by same_predicate ORDER BY COUNT(*) DESC"
+    //val predicates = sparkSession.sql(sqlText2)
+    //predicates.show(15, 80)
+
+    //println(predicates.collect().take(20))
+
+    val wordNetSim = new SimilarityHandler(0.7)
+    val similarPairs = dF2.collect.map(x => (x.getString(0), x.getString(1),
+      wordNetSim.arePredicatesEqual(x.getString(0).split("<")(1).split(">")(0), x.getString(1).split("<")(1).split(">")(0))))
+    println(similarPairs.take(20).toList)
     /*
            The output for exact string equality :
        +--------------+--------+

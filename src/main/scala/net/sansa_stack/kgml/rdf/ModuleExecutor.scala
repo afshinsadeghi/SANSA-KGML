@@ -44,6 +44,8 @@ object ModuleExecutor {
       //input3 = "datasets/yagofact50k.nt"
       input2 = "datasets/dbpediaOnlyAppleobjects.nt"
       input3 = "datasets/yagoonlyAppleobjects.nt"
+      //input2 = "datasets/DBpediaAppleSmalldataset.nt"
+      //input3 = "datasets/YagoAppleSmallDataset.nt"
     }
     println(input1)
     println(input2)
@@ -129,13 +131,21 @@ object ModuleExecutor {
 
     if (input1 == "PredicateMatching") {
       val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
-      matching.getMatchedPredicates(df1, df2)
+       profile {matching.getMatchedPredicates(df1, df2)}
     }
 
 
     println("end of running Module executor.")
 
     sparkSession.stop
+  }
+
+  def profile[R](block: => R): R = {
+    val t0 = System.nanoTime()
+    val result = block    // call-by-name
+    val t1 = System.nanoTime()
+    println("Elapsed time: " + (t1 - t0) / 1000000000.00 + "s")
+    result
   }
 
 }
