@@ -72,7 +72,13 @@ class Matching(sparkSession: SparkSession) {
 
   }
 
-  def getMatchedPredicates(df1: DataFrame, df2: DataFrame): Unit = {
+  /**
+    * Returns a two column dataFrame of matched predicates
+    * @param df1
+    * @param df2
+    * @return
+    */
+  def getMatchedPredicates(df1: DataFrame, df2: DataFrame): DataFrame = {
 
     //1. First filter all predicates in one column dataframes A and B, I expect all fit into memory
     //2. make a cartesian comparison of all them.
@@ -82,7 +88,6 @@ class Matching(sparkSession: SparkSession) {
 
     val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
     //    .withColumn("predicate_ending", getLastPartOfURI(col("object2")))
-
 
     // val dF3 = dF2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
 
@@ -96,10 +101,19 @@ class Matching(sparkSession: SparkSession) {
     //println(predicates.collect().take(20))
 
     val wordNetSim = new SimilarityHandler(0.7)
-    val similarPairs = dF2.collect.map(x => (x.getString(0), x.getString(1),
+    val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
       wordNetSim.arePredicatesEqual(x.getString(0).split("<")(1).split(">")(0).split("/").last,
         x.getString(1).split("<")(1).split(">")(0).split("/").last)))
-    //println(similarPairs.take(200).toList)
+    val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
+    import sparkSession.sqlContext.implicits._
+    val matched = rdd1.toDF("predicate1","predicate2","equal")
+
+    //matched.show(40)
+
+    matched.createOrReplaceTempView("triple1")
+    val sqlText2 = "SELECT predicate1, predicate2 FROM triple1 where equal = true"
+    val predicates = sparkSession.sql(sqlText2)
+    //predicates.show(15, 80)
 
 
     /*
@@ -125,7 +139,6 @@ class Matching(sparkSession: SparkSession) {
              <http://www.w3.org/2000/01/rdf-schema#label>
 
      */
-
-
+    predicates
   }
 }
