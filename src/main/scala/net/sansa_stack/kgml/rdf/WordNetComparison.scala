@@ -97,8 +97,11 @@ class Matching(sparkSession: SparkSession) {
 
     val wordNetSim = new SimilarityHandler(0.7)
     val similarPairs = dF2.collect.map(x => (x.getString(0), x.getString(1),
-      wordNetSim.arePredicatesEqual(x.getString(0).split("<")(1).split(">")(0), x.getString(1).split("<")(1).split(">")(0))))
-    println(similarPairs.take(20).toList)
+      wordNetSim.arePredicatesEqual(x.getString(0).split("<")(1).split(">")(0).split("/").last,
+        x.getString(1).split("<")(1).split(">")(0).split("/").last)))
+    //println(similarPairs.take(200).toList)
+
+
     /*
            The output for exact string equality :
        +--------------+--------+
