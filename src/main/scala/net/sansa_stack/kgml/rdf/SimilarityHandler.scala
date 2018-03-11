@@ -157,16 +157,23 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
     val maxNumOfWordsInStringToTraverse = 5 //the text is cut to make the similarity check faster
     val maxTraverse1 = Math.min(maxNumOfWordsInStringToTraverse, array1.length )
     val maxTraverse2 = Math.min(maxNumOfWordsInStringToTraverse, array2.length )
-    array1 = array1.take(maxTraverse1)
-    array2 = array2.take(maxTraverse2)
-    var intersectionCount = 0.0
-    var localSim = 0.0
-    for (x <- array1 ; y <- array2){
-      localSim = this.getPredicateSimilarity(x, y)
-      if (threshold <= localSim ) { intersectionCount =  intersectionCount + localSim}
+
+    if(maxTraverse1 > 1 && maxTraverse2 > 1){
+
+      val divider = Math.min(maxTraverse1,maxTraverse2)
+      array1 = array1.take(maxTraverse1)
+      array2 = array2.take(maxTraverse2)
+      var intersectionCount = 0.0
+      var localSim = 0.0
+      for (x <- array1 ; y <- array2){
+        localSim = this.getPredicateSimilarity(x, y)
+        if (threshold <= localSim ) { intersectionCount =  intersectionCount + 2}
+      }
+      //println(array1.toList, array2.toList)
+      this.jaccardSimilarity(intersectionCount , array1.length, array2.length)
+    }else{
+      this.getPredicateSimilarity(string1, string1)
     }
-    //println(array1.toList, array2.toList)
-    this.jaccardSimilarity(intersectionCount, array1.length, array2.length)
   }
 
   def jaccardLiteralSimilarityWithWordNet( string1 : String, string2 : String ) : Double = {

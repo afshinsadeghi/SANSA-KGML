@@ -152,4 +152,27 @@ class TypeStats(sparkSession: SparkSession) {
 
 
   }
+
+  /*
+  * giving number of same as links in a data set
+   */
+  def countSameASLinks(df1:DataFrame): Unit ={
+    var df2 = df1.toDF("Subject1", "Predicate1", "Object1")
+    df2.createOrReplaceTempView("triple1")
+    println("Counting number of same as links in the KG:")
+
+    val typedSubjectCount = sparkSession.sql("select predicate1, count(*) from triple1 where predicate1 = '<http://www.w3.org/2002/07/owl#sameAs>' group by predicate1")
+    typedSubjectCount.show(20, 60)
+
+    /*
+    In drugbank dataset the result was
+    Counting number of same as links in the KG:
++--------------------------------------+--------+
+|                            predicate1|count(1)|
++--------------------------------------+--------+
+|<http://www.w3.org/2002/07/owl#sameAs>|    9521|
++--------------------------------------+--------+
+     */
+
+  }
 }
