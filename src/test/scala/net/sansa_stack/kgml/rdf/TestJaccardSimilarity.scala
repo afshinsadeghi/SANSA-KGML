@@ -35,7 +35,13 @@ object TestJaccardSimilarity{
     sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1, longPredicate2)
     print("similarity of " + longPredicate1 + " and "    + longPredicate2 + " is " + sim + "\n" )
 
-
+    //from drugbank dataset and dbpedia predicate comparison
+    similarityThreshold = 0.5
+    similarityHandler.setThreshold(similarityThreshold)
+    longPredicate1 = "casNumber"
+    longPredicate2 = "casRegistryNumber"
+    sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1, longPredicate2)
+    print("similarity of " + longPredicate1 + " and "    + longPredicate2 + " is " + sim + "\n" )
   }
 
 

@@ -167,7 +167,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
       var localSim = 0.0
       for (x <- array1 ; y <- array2){
         localSim = this.getPredicateSimilarity(x, y)
-        if (threshold <= localSim ) { intersectionCount =  intersectionCount + 2}
+        if (threshold <= localSim ) { intersectionCount =  intersectionCount + 1}
       }
       //println(array1.toList, array2.toList)
       this.jaccardSimilarity(intersectionCount , array1.length, array2.length)
