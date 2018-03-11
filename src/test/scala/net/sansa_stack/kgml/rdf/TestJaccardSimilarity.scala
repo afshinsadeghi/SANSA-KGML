@@ -4,7 +4,7 @@
 
 package net.sansa_stack.kgml.rdf
 
-object TestJaccardSimilarity{
+object TestJaccardSimilarity {
 
   def main(args: Array[String]): Unit = {
 
@@ -15,17 +15,17 @@ object TestJaccardSimilarity{
     var longPredicate1 = "isCenterOf"
     var longPredicate2 = "isWorkingWith"
     var sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1, longPredicate2)
-    print("similarity of " + longPredicate1 + " and "    + longPredicate2 + " is " + sim + "\n")
+    print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
 
     longPredicate1 = "isManagerOf"
     longPredicate2 = "isDirectorOf"
     sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1, longPredicate2)
-    print("similarity of " + longPredicate1 + " and "    + longPredicate2 + " is " + sim + "\n")
+    print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
 
     longPredicate1 = "car"
     longPredicate2 = "Auto"
     sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1, longPredicate2)
-    print("similarity of " + longPredicate1 + " and "    + longPredicate2 + " is " + sim + "\n" )
+    print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
 
 
     similarityThreshold = 0.6
@@ -33,16 +33,28 @@ object TestJaccardSimilarity{
     longPredicate1 = "composer"
     longPredicate2 = "musicComposer"
     sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1, longPredicate2)
-    print("similarity of " + longPredicate1 + " and "    + longPredicate2 + " is " + sim + "\n" )
+    print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
 
     //from drugbank dataset and dbpedia predicate comparison
+    //1
     similarityThreshold = 0.5
     similarityHandler.setThreshold(similarityThreshold)
     longPredicate1 = "casNumber"
     longPredicate2 = "casRegistryNumber"
+    sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1,longPredicate2)
+    print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
+
+    //from drugbank dataset and dbpedia predicate comparison
+    //1
+    similarityThreshold = 0.5
+    similarityHandler.setThreshold(similarityThreshold)
+    longPredicate1 = "120993-53-5"
+    longPredicate2 = "cas:120993-53-5"
     sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1, longPredicate2)
-    print("similarity of " + longPredicate1 + " and "    + longPredicate2 + " is " + sim + "\n" )
+    print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
+
   }
+
 
 
 }

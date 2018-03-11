@@ -25,18 +25,24 @@ class Matching(sparkSession: SparkSession) {
     //println("input:" + S)
     if (S == null) null
     else if (S.length > 0 && S.startsWith("<")) {
-      //println("non literal:" + S)
-      null
+      try { //handling special case of Drugbank that puts casRegistryName in URIs, matching between literlas and uri
+        var str = S.split("<")(1).split(">")(0).split("/").last
+        if (str.endsWith(" .")) str = str.drop(2)
+        str
+        //println("non literal:" + S)
+      } catch {
+        case e: Exception =>  null
+      }
     } else {
       //println("literal:" + S)
       if (S.length == 0) null
-      else if( S.startsWith("\"")){
+      else if (S.startsWith("\"")) {
         val str = S.split("\"")
         if (str == null || str.isEmpty) S
         else
           str(1)
-      }else{
-        S  //some file does not have literals in quotation
+      } else {
+        S //some file does not have literals in quotation
       }
     }
   })
@@ -131,7 +137,7 @@ class Matching(sparkSession: SparkSession) {
     //println(predicates.collect().take(20))
 
 
-    val wordNetSim = new SimilarityHandler(0.4)
+    val wordNetSim = new SimilarityHandler(0.5)
     val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
       wordNetSim.arePredicatesEqual(getURIEnding(x.getString(0)),
         getURIEnding(x.getString(1)))))
@@ -203,7 +209,7 @@ class Matching(sparkSession: SparkSession) {
     var dF2 = df2.
       withColumn("Literal2", getLiteralValue(col("object2")))
 
-   // dF2 = dF2.where($"subject2".contains("http://dbpedia.org/resource/2C-B-BUTTERFLY>"))
+    // dF2 = dF2.where($"subject2".contains("http://dbpedia.org/resource/2C-B-BUTTERFLY>"))
 
     //dF1.show(60, 40)
     //dF2.show(60, 40)
@@ -212,7 +218,9 @@ class Matching(sparkSession: SparkSession) {
     dF2.createOrReplaceTempView("triple2")
     val samePredicateAndObject = dF1.
       join(matchedPredicates, dF1("predicate1") <=> matchedPredicates("predicate1")).
-      join(dF2, matchedPredicates("predicate2") <=> dF2("predicate2") && dF1("Literal1")<=> dF2("Literal2") && dF1("Literal1").isNotNull)
+      join(dF2, matchedPredicates("predicate2") <=> dF2("predicate2") && dF1("Literal1") <=> dF2("Literal2") && dF1("Literal1").isNotNull)
+
+    //instead filter(block) triples based on matched predicates and compare literals on them only
 
     samePredicateAndObject.show(70, 50)
 

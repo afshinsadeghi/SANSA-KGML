@@ -43,12 +43,12 @@ object ModuleExecutor {
       input1 = "BlockSubjectsByTypeAndLiteral"
       //input2 = "datasets/dbpediamapping50k.nt"
       //input3 = "datasets/yagofact50k.nt"
-      input2 = "datasets/dbpediaOnlyAppleobjects.nt"
-      input3 = "datasets/yagoonlyAppleobjects.nt"
+      //input2 = "datasets/dbpediaOnlyAppleobjects.nt"
+      //input3 = "datasets/yagoonlyAppleobjects.nt"
       //input2 = "datasets/DBpediaAppleSmalldataset.nt"
       //input3 = "datasets/YagoAppleSmallDataset.nt"
-      //input2 = "datasets/drugbank_dump.nt"
-      //input3 = "datasets/dbpedia.drugs.nt"
+      input2 = "datasets/drugbank_dump.nt"
+      input3 = "datasets/dbpedia.drugs.nt"
     }
     println(input1)
     println(input2)
