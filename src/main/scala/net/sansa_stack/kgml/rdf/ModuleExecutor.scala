@@ -151,12 +151,16 @@ object ModuleExecutor {
 
     if (input1 == "BlockSubjectsByTypeAndLiteral") {
       val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
-      val predicatPairs = profile {
+      val predicatePairs = profile {
         matching.getMatchedPredicates(df1, df2)
       }
-      profile {
-        matching.BlockSubjectsByTypeAndLiteral(df1, df2, predicatPairs)
+      val SubjectsWithLiteral =  profile {
+       matching.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
       }
+      val matchedEntites = profile {
+         matching.getMatchedEntities(SubjectsWithLiteral, predicatePairs)
+      }
+
     }
 
     if (input1 == "CountSameASLinks") {

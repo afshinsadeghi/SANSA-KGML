@@ -201,7 +201,47 @@ class Matching(sparkSession: SparkSession) {
   import org.apache.spark.sql.functions._
   import sparkSession.implicits._
 
-  def BlockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): Unit = {
+  def clusterRankSubjects(SubjectsWithLiteral: DataFrame ): DataFrame ={
+
+    SubjectsWithLiteral.createOrReplaceTempView("sameTypes")
+
+    println("ranking of subjects based on their common type.(I used common predicate and objects which is more general than common type)")
+    val sqlText2 = "SELECT  subject1, subject2, COUNT(*) as count FROM sameTypes group by subject1,subject2 ORDER BY COUNT(*) DESC"
+    val blockedSubjects2 = sparkSession.sql(sqlText2)
+    blockedSubjects2.show(15, 80)
+    /*
+    Result for drugbank
++-----------------------------------------------------------------+--------------------------------------------------------------+--------+
+|                                                         subject1|                                                      subject2|count(1)|
++-----------------------------------------------------------------+--------------------------------------------------------------+--------+
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00112>|                            <http://dbpedia.org/resource/2C-B>|    1268|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB01248>|                            <http://dbpedia.org/resource/2C-B>|    1146|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00112>|                        <http://dbpedia.org/resource/3-sphere>|    1057|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00515>|                            <http://dbpedia.org/resource/2C-B>|    1034|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00112>|             <http://dbpedia.org/resource/3,4-Diaminopyridine>|     980|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00112>|<http://dbpedia.org/resource/2,5-Dimethoxy-4-bromoamphetamine>|     964|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB01248>|                        <http://dbpedia.org/resource/3-sphere>|     957|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00112>|                            <http://dbpedia.org/resource/2C-D>|     955|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00441>|                            <http://dbpedia.org/resource/2C-B>|     940|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00112>|   <http://dbpedia.org/resource/3,4-Methylenedioxyamphetamine>|     933|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB01248>|             <http://dbpedia.org/resource/3,4-Diaminopyridine>|     890|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00531>|                            <http://dbpedia.org/resource/2C-B>|     885|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB01248>|<http://dbpedia.org/resource/2,5-Dimethoxy-4-bromoamphetamine>|     872|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB01248>|                            <http://dbpedia.org/resource/2C-D>|     863|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00073>|                            <http://dbpedia.org/resource/2C-B>|     859|
++-----------------------------------------------------------------+--------------------------------------------------------------+--------+
+only showing top 15 rows
+     */
+    blockedSubjects2
+  }
+
+  /**
+    * block triples based on matched predicates
+    * @param df1
+    * @param df2
+    * @param matchedPredicates
+    */
+  def BlockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): DataFrame = {
 
     val dF1 = df1.
       withColumn("Literal1", getLiteralValue(col("object1")))
@@ -213,31 +253,60 @@ class Matching(sparkSession: SparkSession) {
 
     //dF1.show(60, 40)
     //dF2.show(60, 40)
-
+    val predicatesPairs = matchedPredicates.toDF("Predicate3", "Predicate4")
     dF1.createOrReplaceTempView("triple")
     dF2.createOrReplaceTempView("triple2")
-    val samePredicateAndObject = dF1.
-      join(matchedPredicates, dF1("predicate1") <=> matchedPredicates("predicate1")).
-      join(dF2, matchedPredicates("predicate2") <=> dF2("predicate2") && dF1("Literal1") <=> dF2("Literal2") && dF1("Literal1").isNotNull)
+    val samePredicateSubjectObjects = dF1.
+      join(predicatesPairs, dF1("predicate1") <=> predicatesPairs("Predicate3")).
+      join(dF2, predicatesPairs("Predicate4") <=> dF2("predicate2") && dF2("Literal2").isNotNull && dF1("Literal1").isNotNull)
 
-    //instead filter(block) triples based on matched predicates and compare literals on them only
+    samePredicateSubjectObjects.show(70, 50)
 
-    samePredicateAndObject.show(70, 50)
-
-    samePredicateAndObject.createOrReplaceTempView("sameTypes")
-    println("Those subjects that are matched by matched predicate and matched literals")
-    val sqlText2 = "SELECT subject1, subject2 FROM sameTypes "
-    val typedTriples2 = sparkSession.sql(sqlText2)
-    typedTriples2.show(15, 80)
-
-    println("the number of matched pair of subjects that are matched by matched predicate and matched literals")
+    samePredicateSubjectObjects.createOrReplaceTempView("sameTypes")
+    println("the number of matched pair of subjects that are matched by matched predicate")
     val sqlText3 = "SELECT count(*) FROM sameTypes "
     val typedTriples3 = sparkSession.sql(sqlText3)
     typedTriples3.show()
+
+    //select from  "Subject1","Predicate1","Object1","Literal1", "Predicate3","Predicate4","Subject2","Predicate2","Object2","Literal2"
+
+    val typeSubjectWithLiteral = samePredicateSubjectObjects.select( "Subject1","Predicate1","Literal1", "Subject2","Predicate2","Literal2")
+    typeSubjectWithLiteral
   }
 
-  def getMatchedEntities(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): Unit = {
+  def getMatchedEntities( typeSubjectWithLiteral: DataFrame, matchedPredicates : DataFrame): DataFrame = {
 
 
+    val clusteredSubjects = this.clusterRankSubjects(typeSubjectWithLiteral)
+    val clusters = clusteredSubjects.toDF("Subject4", "Subject5", "count")
+
+    val firstMatchingLevel = typeSubjectWithLiteral.join(clusters,
+      typeSubjectWithLiteral("subject1") <=> clusters("Subject4") &&
+        typeSubjectWithLiteral("subject2") <=> clusters("Subject5") &&
+        clusters("count") < 5 && clusters("count") > 2 //many of them have count 1 and those that have a big number of comparison also are taking the memory
+    )    // block typeSubjectWithLiteral here based on clusteredSubjects
+// redistribute result of distribution such that gain cluster of equal size
+
+    firstMatchingLevel.show(40,80)
+    val wordNetSim = new SimilarityHandler(0.5)
+    val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(2),
+      wordNetSim.areLiteralsEqual(x.getString(1), x.getString(3))))
+
+    val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
+    import sparkSession.sqlContext.implicits._
+    val matched = rdd1.toDF("Subject1", "Subject2", "equal")
+
+    matched.show(40)
+
+    matched.createOrReplaceTempView("matched")
+    val sqlText1 = "SELECT Subject1, Subject2 FROM matched where equal = true"
+    val subjects = sparkSession.sql(sqlText1)
+    subjects.show(50, 80)
+
+    println("the number of matched pair of subjects that are matched by matched predicate and matched literals")
+    val sqlText3 = "SELECT count(*) FROM matched "
+    val typedTriples3 = sparkSession.sql(sqlText3)
+    typedTriples3.show()
+    subjects
   }
 }
