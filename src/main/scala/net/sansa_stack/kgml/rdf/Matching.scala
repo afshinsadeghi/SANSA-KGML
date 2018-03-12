@@ -1,7 +1,7 @@
 package net.sansa_stack.kgml.rdf
 
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /**
   * Created by afshin on 07.03.18.
@@ -119,10 +119,14 @@ class Matching(sparkSession: SparkSession) {
     //2. make a cartesian comparison of all them.
     //df1.show(20, 80)
     //df2.show(20,80)
-    val dF1 = df1.select(df1("predicate1")).distinct.coalesce(5).persist()
+    //val dF1 = df1.select(df1("predicate1")).distinct.coalesce(5).persist()
     //  .withColumn("predicate_ending", getLastPartOfURI(col("object1")))
 
-    val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
+    //val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
+    val dF2 = (df1.select(df1("predicate1")).distinct).crossJoin(df2.select(df2("predicate2")).distinct)
+    println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
+    //Elapsed time: 90.543716752s
+//Elapsed time: 85.588292884s without coalesce(10)
     //    .withColumn("predicate_ending", getLastPartOfURI(col("object2")))
 
     // val dF3 = dF2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
@@ -142,17 +146,20 @@ class Matching(sparkSession: SparkSession) {
       wordNetSim.arePredicatesEqual(getURIEnding(x.getString(0)),
         getURIEnding(x.getString(1)))))
 
+
     val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
     import sparkSession.sqlContext.implicits._
     val matched = rdd1.toDF("predicate1", "predicate2", "equal")
-
-    // matched.show(40)
+    //println("matched predicates:")
+    //matched.show(40)
+    //Elapsed time: 92.068153666s
+    //Elapsed time: 103.122292326s with using cache
+    println("number of partitions for matched predicates = " + matched.rdd.partitions.size)
 
     matched.createOrReplaceTempView("triple1")
     val sqlText2 = "SELECT predicate1, predicate2 FROM triple1 where equal = true"
     val predicates = sparkSession.sql(sqlText2)
     predicates.show(50, 80)
-
 
     /*
 
@@ -199,7 +206,6 @@ class Matching(sparkSession: SparkSession) {
 
 
   import org.apache.spark.sql.functions._
-  import sparkSession.implicits._
 
   def BlockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): Unit = {
 
