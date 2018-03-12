@@ -43,12 +43,15 @@ object ModuleExecutor {
       input1 = "BlockSubjectsByTypeAndLiteral"
       //input2 = "datasets/dbpediamapping50k.nt"
       //input3 = "datasets/yagofact50k.nt"
-      //input2 = "datasets/dbpediaOnlyAppleobjects.nt"
-      //input3 = "datasets/yagoonlyAppleobjects.nt"
+      input2 = "datasets/dbpediaOnlyAppleobjects.nt"
+      input3 = "datasets/yagoonlyAppleobjects.nt"
       //input2 = "datasets/DBpediaAppleSmalldataset.nt"
       //input3 = "datasets/YagoAppleSmallDataset.nt"
-      input2 = "datasets/drugbank_dump.nt"
-      input3 = "datasets/dbpedia.drugs.nt"
+      //input2 = "datasets/drugbank_dump.nt"
+      //input3 = "datasets/dbpedia.drugs.nt"
+      //input2 = "datasets/person21.nt"
+      //input3 = "datasets/person22.nt"
+
     }
     println(input1)
     println(input2)
@@ -76,7 +79,7 @@ object ModuleExecutor {
     var DF1 = sparkSession.read.format("com.databricks.spark.csv")
       .option("header", "false")
       .option("inferSchema", "false")
-      .option("delimiter", " ")
+      .option("delimiter", "\t")
       .option("maxColumns", "4")
       .schema(stringSchema)
       .load(input2)
@@ -85,7 +88,7 @@ object ModuleExecutor {
     var DF2 = sparkSession.read.format("com.databricks.spark.csv")
       .option("header", "false")
       .option("inferSchema", "false")
-      .option("delimiter", "\t")
+      .option("delimiter", "\t")  // for DBpedia it is \t
       .option("maxColumns", "4")
       .schema(stringSchema)
       .load(input3)

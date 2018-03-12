@@ -269,7 +269,7 @@ only showing top 15 rows
     samePredicateSubjectObjects.show(70, 50)
 
     samePredicateSubjectObjects.createOrReplaceTempView("sameTypes")
-    println("the number of matched pair of subjects that are matched by matched predicate")
+    println("the number of pairs of triples that are paired by matched predicate")
     val sqlText3 = "SELECT count(*) FROM sameTypes "
     val typedTriples3 = sparkSession.sql(sqlText3)
     typedTriples3.show()
@@ -288,15 +288,15 @@ only showing top 15 rows
 
     val firstMatchingLevel = typeSubjectWithLiteral.join(clusters,
       typeSubjectWithLiteral("subject1") <=> clusters("Subject4") &&
-        typeSubjectWithLiteral("subject2") <=> clusters("Subject5") &&
-        clusters("count") < 5 && clusters("count") > 2 //many of them have count 1 and those that have a big number of comparison also are taking the memory
+        typeSubjectWithLiteral("subject2") <=> clusters("Subject5")  //&&
+     //   clusters("count") < 5 && clusters("count") > 2 //many of them have count 1 and those that have a big number of comparison also are taking the memory
     )    // block typeSubjectWithLiteral here based on clusteredSubjects
 // redistribute result of distribution such that gain cluster of equal size
 
     firstMatchingLevel.show(40,80)
     val wordNetSim = new SimilarityHandler(0.5)
-    val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(2),
-      wordNetSim.areLiteralsEqual(x.getString(1), x.getString(3))))
+    val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(3),
+      wordNetSim.areLiteralsEqual(x.getString(2), x.getString(5))))
 
     val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
     import sparkSession.sqlContext.implicits._
@@ -309,8 +309,8 @@ only showing top 15 rows
     val subjects = sparkSession.sql(sqlText1)
     subjects.show(50, 80)
 
-    println("the number of matched pair of subjects that are matched by matched predicate and matched literals")
-    val sqlText3 = "SELECT count(*) FROM matched "
+    println("the number of matched pair of subjects that are paired by matched predicate and matched literals")
+    val sqlText3 = "SELECT count(*) FROM matched where equal = true"
     val typedTriples3 = sparkSession.sql(sqlText3)
     typedTriples3.show()
     subjects
