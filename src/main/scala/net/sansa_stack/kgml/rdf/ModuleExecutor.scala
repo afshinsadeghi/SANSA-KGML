@@ -153,14 +153,11 @@ object ModuleExecutor {
     }
 
     if (input1 == "BlockSubjectsByTypeAndLiteral") {
-      val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
-      val predicatePairs = profile {
-        matching.getMatchedPredicates(df1, df2)
-      }
-      val SubjectsWithLiteral =  profile {
-       matching.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
-      }
+
       val matchedEntites = profile {
+        val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
+        val predicatePairs = matching.getMatchedPredicates(df1, df2)
+        val SubjectsWithLiteral = matching.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
          matching.getMatchedEntities(SubjectsWithLiteral, predicatePairs)
       }
 
