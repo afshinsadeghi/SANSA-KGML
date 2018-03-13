@@ -255,34 +255,34 @@ in Persons dataset:
 +-----------------------------------------------------------------+--------------------------------------------------------------+--------+
 only showing top 15 rows
      */
-       blockedSubjects2
+    blockedSubjects2
   }
 
-  def clusterRankCounts(rankedSubjectWithCommonPredicateCount : DataFrame) : DataFrame = {
+  def clusterRankCounts(rankedSubjectWithCommonPredicateCount: DataFrame): DataFrame = {
     rankedSubjectWithCommonPredicateCount.createOrReplaceTempView("groupedSubjects")
     println("ranking of common triple counts based on their count.")
     val sqlText3 = "SELECT  count CommonPredicates , COUNT(*) TriplesWithThisCommonPredicateNumber,  (Count * Count(*)) comparisonsRequired   FROM groupedSubjects group by COUNT ORDER BY COUNT(*) DESC"
     val rankedCounts = sparkSession.sql(sqlText3)
     rankedCounts.show(15, 80)
     rankedCounts
-/*
-For persons dataSet the result is
+    /*
+    For persons dataSet the result is
 
-ranking of common triple counts based on their count.
-+----------------+------------------------------------+-------------------+
-|CommonPredicates|TriplesWithThisCommonPredicateNumber|comparisonsRequired|
-+----------------+------------------------------------+-------------------+
-|               1|                             1500016|            1500016|
-|               4|                              226770|             907080|
-|               8|                              115928|             927424|
-|               7|                              101537|             710759|
-|               6|                               28255|             169530|
-|               3|                               21673|              65019|
-|               5|                                4079|              20395|
-|               2|                                1742|               3484|
-+----------------+------------------------------------+-------------------+
+    ranking of common triple counts based on their count.
+    +----------------+------------------------------------+-------------------+
+    |CommonPredicates|TriplesWithThisCommonPredicateNumber|comparisonsRequired|
+    +----------------+------------------------------------+-------------------+
+    |               1|                             1500016|            1500016|
+    |               4|                              226770|             907080|
+    |               8|                              115928|             927424|
+    |               7|                              101537|             710759|
+    |               6|                               28255|             169530|
+    |               3|                               21673|              65019|
+    |               5|                                4079|              20395|
+    |               2|                                1742|               3484|
+    +----------------+------------------------------------+-------------------+
 
- */
+     */
 
   }
 
@@ -340,7 +340,13 @@ ranking of common triple counts based on their count.
 
     val clusters = clusteredSubjects.toDF("Subject4", "Subject5", "count")
 
+    val numberOfCommonTriples = clusterRankedCounts.select("CommonPredicates", "comparisonsRequired")
+       .rdd.map(r => (r(0).toString.toInt , r(1).toString.toInt )).sortByKey(false, 1).collect()
 
+    val lengthOfNumberOfCommonTriples = numberOfCommonTriples.length
+
+
+    println(lengthOfNumberOfCommonTriples) //get the iteration number
 
     /*
      for 4 Gig heap memory, 30,000 pairs fits if more should be blocked
@@ -348,41 +354,49 @@ ranking of common triple counts based on their count.
      */
     val slotSize = 30000 // This is the maximum number of pairs that fit in 4 Gig heap memory
     val slots = heapMemoryInGB / 4
-    val requiredSlots = matchedPredicateTriplesSum.collect.head(0).toString.toInt / slotSize
-    var requiredRepetition = 1
-    if (requiredSlots > slots) requiredRepetition = requiredSlots / slots
+
 
     var matchedUnion = matchedPredicateTriplesSum //just to inherit type of Data Frame
-    for (x <- 1 until requiredRepetition) {
 
-      println("loop number " + x + " from " + requiredRepetition)
+    for (x <- 1 to lengthOfNumberOfCommonTriples) {
 
+      println("commonPredicate loop number " + x + " from " + lengthOfNumberOfCommonTriples)
 
+      //var requiredSlots = matchedPredicateTriplesSum.collect.head(0).toString.toInt / slotSize
+      var requiredSlots = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x )._2 / slotSize
+      var requiredRepetition = 1
+      if (requiredSlots > slots) requiredRepetition = requiredSlots / slots
 
-      val xString = x.toString
-      val firstMatchingLevel = typeSubjectWithLiteral.join(clusters,
-        typeSubjectWithLiteral("subject1") === clusters("Subject4") &&
-          typeSubjectWithLiteral("subject2") === clusters("Subject5") &&
-           clusters("count") === xString , "inner"    //  && clusters("count") > x - 1
-      )
-      // it is better to start from count 1 and increase becasue they are more atomic and most probably are label or name
-      // But can happen that many pairs have one common predicate so I should break them too and those that have a big number of comparison also are taking the memory.
+      for (y <- 1 until requiredRepetition) {
+        println("block loop number " + y + " from " + requiredRepetition)
 
-      // block typeSubjectWithLiteral here based on clusteredSubjects
-      // redistribute result of distribution such that gain cluster of equal size
+        val commonPredicates = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x )._1.toString
+        println("processing triples with number of commonPredicates equal to" + commonPredicates )
 
-      //suppose 10000 comparison fits in memory. start with the biggest one that has not less than
+        val firstMatchingLevel = typeSubjectWithLiteral.join(clusters,
+          typeSubjectWithLiteral("subject1") === clusters("Subject4") &&
+            typeSubjectWithLiteral("subject2") === clusters("Subject5") &&
+            clusters("count") === commonPredicates, "inner" //  && here Must filter a portion of slotSize fot each count and put that in a memory block
+        )
+        // it is better to start from count 1 and increase becasue they are more atomic and most probably are label or name
+        // But can happen that many pairs have one common predicate so I should break them too and those that have a big number of comparison also are taking the memory.
 
-      //another case is that one block is very big. for example all the data is unified and had 8 links to compare. This
-      // filtering method alone will not solve it. We have to break a big block to smaller ones.
-      firstMatchingLevel.show(40, 80)
+        // block typeSubjectWithLiteral here based on clusteredSubjects
+        // redistribute result of distribution such that gain cluster of equal size
 
-      if (x < 2) {
-        var matched = getMatchedEntities(firstMatchingLevel)
-        matchedUnion = matched
-      } else {
-        val matched = getMatchedEntities(firstMatchingLevel)
-        matchedUnion = matchedUnion.union(matched)
+        //suppose 10000 comparison fits in memory. start with the biggest one that has not less than
+
+        //another case is that one block is very big. for example all the data is unified and had 8 links to compare. This
+        // filtering method alone will not solve it. We have to break a big block to smaller ones.
+        firstMatchingLevel.show(40, 80)
+
+        if (x < 2) {
+          var matched = getMatchedEntities(firstMatchingLevel)
+          matchedUnion = matched
+        } else {
+          val matched = getMatchedEntities(firstMatchingLevel)
+          matchedUnion = matchedUnion.union(matched)
+        }
       }
     }
     matchedUnion
