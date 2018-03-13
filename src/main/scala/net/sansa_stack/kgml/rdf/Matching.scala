@@ -338,7 +338,7 @@ only showing top 15 rows
     val clusteredSubjects = this.clusterRankSubjects(typeSubjectWithLiteral)
     val clusterRankedCounts = this.clusterRankCounts(clusteredSubjects)
 
-    val clusters = clusteredSubjects.toDF("Subject4", "Subject5", "count")
+    val clusters = clusteredSubjects.toDF("Subject4", "Subject5", "commonPredicateCount")
 
     val numberOfCommonTriples = clusterRankedCounts.select("CommonPredicates", "comparisonsRequired")
        .rdd.map(r => (r(0).toString.toInt , r(1).toString.toInt )).sortByKey(false, 1).collect()
@@ -367,16 +367,22 @@ only showing top 15 rows
       var requiredRepetition = 1
       if (requiredSlots > slots) requiredRepetition = requiredSlots / slots
 
-      for (y <- 1 until requiredRepetition) {
+      val commonPredicates = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x )._1.toString
+      println("processing triples with number of commonPredicates equal to" + commonPredicates )
+
+      var cluster = clusters.where(clusters("commonPredicateCount") === commonPredicates)
+
+      var arr = Array.fill(requiredRepetition)(1.0)
+      val clustersArray = cluster.randomSplit(arr)
+
+      for (y <- 0 until requiredRepetition) {
         println("block loop number " + y + " from " + requiredRepetition)
 
-        val commonPredicates = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x )._1.toString
-        println("processing triples with number of commonPredicates equal to" + commonPredicates )
 
-        val firstMatchingLevel = typeSubjectWithLiteral.join(clusters,
+        val firstMatchingLevel = typeSubjectWithLiteral.join(clustersArray(y),
           typeSubjectWithLiteral("subject1") === clusters("Subject4") &&
-            typeSubjectWithLiteral("subject2") === clusters("Subject5") &&
-            clusters("count") === commonPredicates, "inner" //  && here Must filter a portion of slotSize fot each count and put that in a memory block
+            typeSubjectWithLiteral("subject2") === clusters("Subject5")
+           , "inner" //  && here Must filter a portion of slotSize fot each count and put that in a memory block
         )
         // it is better to start from count 1 and increase becasue they are more atomic and most probably are label or name
         // But can happen that many pairs have one common predicate so I should break them too and those that have a big number of comparison also are taking the memory.
