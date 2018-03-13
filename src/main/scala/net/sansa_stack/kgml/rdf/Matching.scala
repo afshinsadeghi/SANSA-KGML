@@ -1,6 +1,7 @@
 package net.sansa_stack.kgml.rdf
 
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /**
@@ -31,7 +32,7 @@ class Matching(sparkSession: SparkSession) {
         str
         //println("non literal:" + S)
       } catch {
-        case e: Exception =>  null
+        case e: Exception => null
       }
     } else {
       //println("literal:" + S)
@@ -126,7 +127,7 @@ class Matching(sparkSession: SparkSession) {
     val dF2 = (df1.select(df1("predicate1")).distinct).crossJoin(df2.select(df2("predicate2")).distinct)
     println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
     //Elapsed time: 90.543716752s
-//Elapsed time: 85.588292884s without coalesce(10)
+    //Elapsed time: 85.588292884s without coalesce(10)
     //    .withColumn("predicate_ending", getLastPartOfURI(col("object2")))
 
     // val dF3 = dF2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
@@ -196,7 +197,7 @@ in Persons dataset:
 +---------------------------------------------------------+---------------------------------------------------------+
 
 
-           The output for exact string equality on apple debeida:
+           The output for exact string equality on apple DBpeida:
        +--------------+--------+
        |same_predicate|count(1)|
        +--------------+--------+
@@ -223,7 +224,7 @@ in Persons dataset:
 
   import org.apache.spark.sql.functions._
 
-  def clusterRankSubjects(SubjectsWithLiteral: DataFrame ): DataFrame ={
+  def clusterRankSubjects(SubjectsWithLiteral: DataFrame): DataFrame = {
 
     SubjectsWithLiteral.createOrReplaceTempView("sameTypes")
 
@@ -254,11 +255,40 @@ in Persons dataset:
 +-----------------------------------------------------------------+--------------------------------------------------------------+--------+
 only showing top 15 rows
      */
-    blockedSubjects2
+       blockedSubjects2
+  }
+
+  def clusterRankCounts(rankedSubjectWithCommonPredicateCount : DataFrame) : DataFrame = {
+    rankedSubjectWithCommonPredicateCount.createOrReplaceTempView("groupedSubjects")
+    println("ranking of common triple counts based on their count.")
+    val sqlText3 = "SELECT  count CommonPredicates , COUNT(*) TriplesWithThisCommonPredicateNumber,  (Count * Count(*)) comparisonsRequired   FROM groupedSubjects group by COUNT ORDER BY COUNT(*) DESC"
+    val rankedCounts = sparkSession.sql(sqlText3)
+    rankedCounts.show(15, 80)
+    rankedCounts
+/*
+For persons dataSet the result is
+
+ranking of common triple counts based on their count.
++----------------+------------------------------------+-------------------+
+|CommonPredicates|TriplesWithThisCommonPredicateNumber|comparisonsRequired|
++----------------+------------------------------------+-------------------+
+|               1|                             1500016|            1500016|
+|               4|                              226770|             907080|
+|               8|                              115928|             927424|
+|               7|                              101537|             710759|
+|               6|                               28255|             169530|
+|               3|                               21673|              65019|
+|               5|                                4079|              20395|
+|               2|                                1742|               3484|
++----------------+------------------------------------+-------------------+
+
+ */
+
   }
 
   /**
     * block triples based on matched predicates
+    *
     * @param df1
     * @param df2
     * @param matchedPredicates
@@ -286,7 +316,7 @@ only showing top 15 rows
 
     //select from  "Subject1","Predicate1","Object1","Literal1", "Predicate3","Predicate4","Subject2","Predicate2","Object2","Literal2"
 
-    val typeSubjectWithLiteral = samePredicateSubjectObjects.select( "Subject1","Literal1", "Subject2","Literal2")
+    val typeSubjectWithLiteral = samePredicateSubjectObjects.select("Subject1", "Literal1", "Subject2", "Literal2")
     //The other way round will be comparison of subjects. but if the URI format is hashed based then that is useless.
     // By comparing filtered objects we compare literals as well.
     // We cover two cases, when ids are embedded into URI and not literals, as in case of Drug bank data set
@@ -295,40 +325,70 @@ only showing top 15 rows
     typeSubjectWithLiteral
   }
 
-  def scheduleMatching( typeSubjectWithLiteral: DataFrame): DataFrame = {
+  def scheduleMatching(typeSubjectWithLiteral: DataFrame, heapMemoryInGB: Integer): DataFrame = {
 
 
     typeSubjectWithLiteral.createOrReplaceTempView("sameTypes")
     println("the number of pairs of triples that are paired by matched predicate")
-    val sqlText3 = "SELECT count(1) as  FROM sameTypes"
+    val sqlText3 = "SELECT count(1) matchedPredicateTriplesSum  FROM sameTypes"
     val matchedPredicateTriplesSum = sparkSession.sql(sqlText3)
     matchedPredicateTriplesSum.show()
-    //for 4 Gig heap , 30,000 pairs if more should be blocked
 
 
     val clusteredSubjects = this.clusterRankSubjects(typeSubjectWithLiteral)
+    val clusterRankedCounts = this.clusterRankCounts(clusteredSubjects)
+
     val clusters = clusteredSubjects.toDF("Subject4", "Subject5", "count")
 
-    val firstMatchingLevel = typeSubjectWithLiteral.join(clusters,
-      typeSubjectWithLiteral("subject1") <=> clusters("Subject4") &&
-        typeSubjectWithLiteral("subject2") <=> clusters("Subject5") //&&
-      //   clusters("count") < 5 && clusters("count") > 2 //many of them have count 1 and those that have a big number of comparison also are taking the memory
-    ) // block typeSubjectWithLiteral here based on clusteredSubjects
-    // redistribute result of distribution such that gain cluster of equal size
 
 
-    //suppose 10000 comparison fits in memory. start with the biggest one that has not less than
+    /*
+     for 4 Gig heap memory, 30,000 pairs fits if more should be blocked
+     For person1 dataset it was 4,303,707 and it gave "java.lang.OutOfMemoryError: GC overhead limit exceeded" error
+     */
+    val slotSize = 30000 // This is the maximum number of pairs that fit in 4 Gig heap memory
+    val slots = heapMemoryInGB / 4
+    val requiredSlots = matchedPredicateTriplesSum.collect.head(0).toString.toInt / slotSize
+    var requiredRepetition = 1
+    if (requiredSlots > slots) requiredRepetition = requiredSlots / slots
 
-    //another case is that one block is very big. for example all the data is unified and had 8 links to compare. This
-    // filtering method alone will not solve it. We have to break a big block to smaller ones.
-    firstMatchingLevel.show(40, 80)
+    var matchedUnion = matchedPredicateTriplesSum //just to inherit type of Data Frame
+    for (x <- 1 until requiredRepetition) {
 
-   val matched =getMatchedEntities(firstMatchingLevel)
+      println("loop number " + x + " from " + requiredRepetition)
 
-    matched
+
+
+      val xString = x.toString
+      val firstMatchingLevel = typeSubjectWithLiteral.join(clusters,
+        typeSubjectWithLiteral("subject1") === clusters("Subject4") &&
+          typeSubjectWithLiteral("subject2") === clusters("Subject5") &&
+           clusters("count") === xString , "inner"    //  && clusters("count") > x - 1
+      )
+      // it is better to start from count 1 and increase becasue they are more atomic and most probably are label or name
+      // But can happen that many pairs have one common predicate so I should break them too and those that have a big number of comparison also are taking the memory.
+
+      // block typeSubjectWithLiteral here based on clusteredSubjects
+      // redistribute result of distribution such that gain cluster of equal size
+
+      //suppose 10000 comparison fits in memory. start with the biggest one that has not less than
+
+      //another case is that one block is very big. for example all the data is unified and had 8 links to compare. This
+      // filtering method alone will not solve it. We have to break a big block to smaller ones.
+      firstMatchingLevel.show(40, 80)
+
+      if (x < 2) {
+        var matched = getMatchedEntities(firstMatchingLevel)
+        matchedUnion = matched
+      } else {
+        val matched = getMatchedEntities(firstMatchingLevel)
+        matchedUnion = matchedUnion.union(matched)
+      }
+    }
+    matchedUnion
   }
 
-    def getMatchedEntities( firstMatchingLevel: DataFrame): DataFrame = {
+  def getMatchedEntities(firstMatchingLevel: DataFrame): DataFrame = {
     val wordNetSim = new SimilarityHandler(0.5)
     val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(3),
       wordNetSim.areLiteralsEqual(x.getString(2), x.getString(5))))

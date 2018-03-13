@@ -21,7 +21,7 @@ object ModuleExecutor {
   var input1 = "" // the module name
   var input2 = "" // parameters
   var input3 = ""
-
+  var input4 = "" // memory in GB
   def main(args: Array[String]) = {
     println("running a module...")
 
@@ -32,6 +32,9 @@ object ModuleExecutor {
       }
       if (args.length > 2) {
         input3 = args(2)
+      }
+      if (args.length > 3) {
+        input4 = args(3)
       }
 
     } else {
@@ -51,7 +54,7 @@ object ModuleExecutor {
       //input3 = "datasets/dbpedia.drugs.nt"
       input2 = "datasets/person11.nt"
       input3 = "datasets/person12.nt"
-
+      input4 = "4" //4GB is the default heap memory value of spark
     }
     println(input1)
     println(input2)
@@ -158,7 +161,8 @@ object ModuleExecutor {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
         val predicatePairs = matching.getMatchedPredicates(df1, df2)
         val SubjectsWithLiteral = matching.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
-         matching.scheduleMatching(SubjectsWithLiteral)
+        val heapMemory = input4.toInt //4GB is the default value
+         matching.scheduleMatching(SubjectsWithLiteral ,heapMemory)
       }
 
     }

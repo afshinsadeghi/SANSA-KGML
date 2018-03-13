@@ -16,12 +16,34 @@ import org.apache.spark.sql.functions._
 class TypeStats(sparkSession: SparkSession) {
 
 
-  /**
-    * Returning value of a literal
-    */
-
-  val getLiteralValue = udf((S: String) =>  {if(S.startsWith("\"") ) S.split("\"")(1) else S})
-
+  /*
+* get literal value in objects
+ */
+  val getLiteralValue = udf((S: String) => {
+    //println("input:" + S)
+    if (S == null) null
+    else if (S.length > 0 && S.startsWith("<")) {
+      try { //handling special case of Drugbank that puts casRegistryName in URIs, matching between literlas and uri
+        var str = S.split("<")(1).split(">")(0).split("/").last
+        if (str.endsWith(" .")) str = str.drop(2)
+        str
+        //println("non literal:" + S)
+      } catch {
+        case e: Exception => null
+      }
+    } else {
+      //println("literal:" + S)
+      if (S.length == 0) null
+      else if (S.startsWith("\"")) {
+        val str = S.split("\"")
+        if (str == null || str.isEmpty) S
+        else
+          str(1)
+      } else {
+        S //some file does not have literals in quotation
+      }
+    }
+  })
 
   def calculateStats(triplesRDD1: RDD[(Triple)], triplesRDD2: RDD[(Triple)]): Unit = {
 
@@ -77,7 +99,7 @@ class TypeStats(sparkSession: SparkSession) {
 
     println("5 sample Triples of the dataset")
     val sampleTriples = sparkSession.sql("SELECT * from triple1")
-    sampleTriples.show(5, 40)
+    sampleTriples.show(5, 80)
 
     println("Number of Triples with type")
     val sqlText = "SELECT COUNT(*) FROM triple1 where predicate1 = '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>'"
@@ -91,17 +113,17 @@ class TypeStats(sparkSession: SparkSession) {
       " = '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>' group by object1 UNION ALL" +
       " SELECT 'SUM' object1, COUNT(object1) FROM triple1 where predicate1 =" +
       " '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>'")
-    typedObjectCount.show(40, 40)
+    typedObjectCount.show(40, 80)
 
     println("distribution of subjects with type")
 
     val typedSubjectCount = sparkSession.sql("select  subject1, count(*) from triple1 where predicate1 = '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>' group by subject1 UNION ALL SELECT 'SUM' subject1, COUNT(subject1) FROM triple1 where predicate1 = '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>'")
-    typedSubjectCount.show(40, 40)
+    typedSubjectCount.show(40, 80)
 
 
     println("Number of subjects with no type")
     val notTypedSubjectCount = sparkSession.sql("Select Count(*) from ( select distinct subject1 from triple1 t1 WHERE NOT EXISTS ( SELECT 1 FROM triple1 t2  WHERE t1.subject1 = t2.subject1 AND t2.predicate1 = '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>') group by subject1)")
-    notTypedSubjectCount.show(40, 60)
+    notTypedSubjectCount.show(40, 80)
   }
 
 
