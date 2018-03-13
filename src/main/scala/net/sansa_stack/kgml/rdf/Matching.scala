@@ -177,7 +177,23 @@ class Matching(sparkSession: SparkSession) {
 |           <http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugbank/name>|               <http://dbpedia.org/property/name>|
 +----------------------------------------------------------------------------+-------------------------------------------------+
 
+in Persons dataset:
 
++---------------------------------------------------------+---------------------------------------------------------+
+|                                               predicate1|                                               predicate2|
++---------------------------------------------------------+---------------------------------------------------------+
+|        <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>|        <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>|
+|  <http://www.okkam.org/ontology_person1.owl#phone_numer>|  <http://www.okkam.org/ontology_person2.owl#phone_numer>|
+|          <http://www.okkam.org/ontology_person1.owl#age>|          <http://www.okkam.org/ontology_person2.owl#age>|
+|   <http://www.okkam.org/ontology_person1.owl#given_name>|   <http://www.okkam.org/ontology_person2.owl#given_name>|
+|     <http://www.okkam.org/ontology_person1.owl#postcode>|     <http://www.okkam.org/ontology_person2.owl#postcode>|
+|  <http://www.okkam.org/ontology_person1.owl#has_address>|  <http://www.okkam.org/ontology_person2.owl#has_address>|
+|      <http://www.okkam.org/ontology_person1.owl#surname>|      <http://www.okkam.org/ontology_person2.owl#surname>|
+|       <http://www.okkam.org/ontology_person1.owl#street>|       <http://www.okkam.org/ontology_person2.owl#street>|
+|<http://www.okkam.org/ontology_person1.owl#date_of_birth>|<http://www.okkam.org/ontology_person2.owl#date_of_birth>|
+| <http://www.okkam.org/ontology_person1.owl#house_number>| <http://www.okkam.org/ontology_person2.owl#house_number>|
+|   <http://www.okkam.org/ontology_person1.owl#soc_sec_id>|   <http://www.okkam.org/ontology_person2.owl#soc_sec_id>|
++---------------------------------------------------------+---------------------------------------------------------+
 
 
            The output for exact string equality on apple debeida:
@@ -268,19 +284,26 @@ only showing top 15 rows
 
     samePredicateSubjectObjects.show(70, 50)
 
-    samePredicateSubjectObjects.createOrReplaceTempView("sameTypes")
-    println("the number of pairs of triples that are paired by matched predicate")
-    val sqlText3 = "SELECT count(*) FROM sameTypes "
-    val typedTriples3 = sparkSession.sql(sqlText3)
-    typedTriples3.show()
-
     //select from  "Subject1","Predicate1","Object1","Literal1", "Predicate3","Predicate4","Subject2","Predicate2","Object2","Literal2"
 
-    val typeSubjectWithLiteral = samePredicateSubjectObjects.select( "Subject1","Predicate1","Literal1", "Subject2","Predicate2","Literal2")
+    val typeSubjectWithLiteral = samePredicateSubjectObjects.select( "Subject1","Literal1", "Subject2","Literal2")
+    //The other way round will be comparison of subjects. but if the URI format is hashed based then that is useless.
+    // By comparing filtered objects we compare literals as well.
+    // We cover two cases, when ids are embedded into URI and not literals, as in case of Drug bank data set
+    // There is also a chance that entities from both kgs
+    // refer to same KG using sameAs link.
     typeSubjectWithLiteral
   }
 
-  def getMatchedEntities( typeSubjectWithLiteral: DataFrame, matchedPredicates : DataFrame): DataFrame = {
+  def scheduleMatching( typeSubjectWithLiteral: DataFrame): DataFrame = {
+
+
+    typeSubjectWithLiteral.createOrReplaceTempView("sameTypes")
+    println("the number of pairs of triples that are paired by matched predicate")
+    val sqlText3 = "SELECT count(1) as  FROM sameTypes Group By Count(1) "
+    val matchedPredicateTriplesSum = sparkSession.sql(sqlText3)
+    matchedPredicateTriplesSum.show()
+    //for 4 Gig heap , 30,000 pairs if more should be blocked
 
 
     val clusteredSubjects = this.clusterRankSubjects(typeSubjectWithLiteral)
@@ -288,12 +311,24 @@ only showing top 15 rows
 
     val firstMatchingLevel = typeSubjectWithLiteral.join(clusters,
       typeSubjectWithLiteral("subject1") <=> clusters("Subject4") &&
-        typeSubjectWithLiteral("subject2") <=> clusters("Subject5")  //&&
-     //   clusters("count") < 5 && clusters("count") > 2 //many of them have count 1 and those that have a big number of comparison also are taking the memory
-    )    // block typeSubjectWithLiteral here based on clusteredSubjects
-// redistribute result of distribution such that gain cluster of equal size
+        typeSubjectWithLiteral("subject2") <=> clusters("Subject5") //&&
+      //   clusters("count") < 5 && clusters("count") > 2 //many of them have count 1 and those that have a big number of comparison also are taking the memory
+    ) // block typeSubjectWithLiteral here based on clusteredSubjects
+    // redistribute result of distribution such that gain cluster of equal size
 
-    firstMatchingLevel.show(40,80)
+
+    //suppose 10000 comparison fits in memory. start with the biggest one that has not less than
+
+    //another case is that one block is very big. for example all the data is unified and had 8 links to compare. This
+    // filtering method alone will not solve it. We have to break a big block to smaller ones.
+    firstMatchingLevel.show(40, 80)
+
+   val matched =getMatchedEntities(firstMatchingLevel)
+
+    matched
+  }
+
+    def getMatchedEntities( firstMatchingLevel: DataFrame): DataFrame = {
     val wordNetSim = new SimilarityHandler(0.5)
     val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(3),
       wordNetSim.areLiteralsEqual(x.getString(2), x.getString(5))))

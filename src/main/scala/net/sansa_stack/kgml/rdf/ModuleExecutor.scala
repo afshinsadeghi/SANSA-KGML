@@ -158,7 +158,7 @@ object ModuleExecutor {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
         val predicatePairs = matching.getMatchedPredicates(df1, df2)
         val SubjectsWithLiteral = matching.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
-         matching.getMatchedEntities(SubjectsWithLiteral, predicatePairs)
+         matching.scheduleMatching(SubjectsWithLiteral)
       }
 
     }
