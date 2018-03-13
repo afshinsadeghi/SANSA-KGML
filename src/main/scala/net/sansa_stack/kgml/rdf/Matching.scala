@@ -300,7 +300,7 @@ only showing top 15 rows
 
     typeSubjectWithLiteral.createOrReplaceTempView("sameTypes")
     println("the number of pairs of triples that are paired by matched predicate")
-    val sqlText3 = "SELECT count(1) as  FROM sameTypes Group By Count(1) "
+    val sqlText3 = "SELECT count(1) as  FROM sameTypes"
     val matchedPredicateTriplesSum = sparkSession.sql(sqlText3)
     matchedPredicateTriplesSum.show()
     //for 4 Gig heap , 30,000 pairs if more should be blocked
