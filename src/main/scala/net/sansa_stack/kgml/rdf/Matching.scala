@@ -325,7 +325,7 @@ only showing top 15 rows
     typeSubjectWithLiteral
   }
 
-  def scheduleMatching(typeSubjectWithLiteral: DataFrame, heapMemoryInGB: Integer): DataFrame = {
+  def scheduleMatching(typeSubjectWithLiteral: DataFrame, memoryInGB: Integer): DataFrame = {
 
 
     typeSubjectWithLiteral.createOrReplaceTempView("sameTypes")
@@ -346,14 +346,15 @@ only showing top 15 rows
     val lengthOfNumberOfCommonTriples = numberOfCommonTriples.length
 
 
-    println(lengthOfNumberOfCommonTriples) //get the iteration number
+    //println(lengthOfNumberOfCommonTriples) //get the iteration number
 
     /*
-     for 4 Gig heap memory, 30,000 pairs fits if more should be blocked
+     for 1 GigaByte memory, 40,000 pairs fits if more should be blocked
      For person1 dataset it was 4,303,707 and it gave "java.lang.OutOfMemoryError: GC overhead limit exceeded" error
      */
-    val slotSize = 30000 // This is the maximum number of pairs that fit in 4 Gig heap memory
-    val slots = heapMemoryInGB / 4
+    val defaultMemoryForSlotSize = 1 //in GB
+    val slotSize = 40000 // This is the maximum number of pairs that fit in 4 Gig heap memory
+    val slots = memoryInGB / defaultMemoryForSlotSize
 
 
     var matchedUnion = matchedPredicateTriplesSum //just to inherit type of Data Frame

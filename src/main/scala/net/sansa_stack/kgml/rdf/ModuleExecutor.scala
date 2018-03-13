@@ -21,7 +21,6 @@ object ModuleExecutor {
   var input1 = "" // the module name
   var input2 = "" // parameters
   var input3 = ""
-  var input4 = "" // memory in GB
   def main(args: Array[String]) = {
     println("running a module...")
 
@@ -32,9 +31,6 @@ object ModuleExecutor {
       }
       if (args.length > 2) {
         input3 = args(2)
-      }
-      if (args.length > 3) {
-        input4 = args(3)
       }
 
     } else {
@@ -54,11 +50,14 @@ object ModuleExecutor {
       //input3 = "datasets/dbpedia.drugs.nt"
       input2 = "datasets/person11.nt"
       input3 = "datasets/person12.nt"
-      input4 = "4" //4GB is the default heap memory value of spark
     }
     println(input1)
     println(input2)
     println(input3)
+    val gb = 1024*1024*1024
+    val runTime = Runtime.getRuntime
+    val memory = (runTime.maxMemory / gb).toInt
+    println("dedicated memory:   " + memory + " gb") //1 GB is the default memory of spark
 
     val sparkSession = SparkSession.builder
       .master("local[*]")
@@ -161,9 +160,11 @@ object ModuleExecutor {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
         val predicatePairs = matching.getMatchedPredicates(df1, df2)
         val SubjectsWithLiteral = matching.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
-        val heapMemory = input4.toInt //4GB is the default value
-         matching.scheduleMatching(SubjectsWithLiteral ,heapMemory)
+         matching.scheduleMatching(SubjectsWithLiteral, memory)
       }
+      matchedEntites.show(200, 80)
+      println("number of matched entities pairs: "+ matchedEntites.count.toString)
+      matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../out/matchedSubjects.txt")
 
     }
 
