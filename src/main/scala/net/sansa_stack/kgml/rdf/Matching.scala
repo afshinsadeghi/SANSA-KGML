@@ -27,9 +27,10 @@ class Matching(sparkSession: SparkSession) {
     if (S == null) null
     else if (S.length > 0 && S.startsWith("<")) {
       try { //handling special case of Drugbank that puts casRegistryName in URIs, matching between literlas and uri
-        var str = S.split("<")(1).split(">")(0).split("/").last
-        if (str.endsWith(" .")) str = str.drop(2)
-        str
+     //   var str = S.split("<")(1).split(">")(0).split("/").last
+      //  if (str.endsWith(" .")) str = str.drop(2)
+       // str
+        null
         //println("non literal:" + S)
       } catch {
         case e: Exception => null
@@ -411,8 +412,8 @@ only showing top 15 rows
 
   def getMatchedEntities(firstMatchingLevel: DataFrame): DataFrame = {
     val wordNetSim = new SimilarityHandler(0.5)
-    val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(3),
-      wordNetSim.areLiteralsEqual(x.getString(2), x.getString(5))))
+    val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(2),
+      wordNetSim.areLiteralsEqual(x.getString(1), x.getString(3))))
 
     val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
     import sparkSession.sqlContext.implicits._
