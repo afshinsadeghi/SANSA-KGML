@@ -1,8 +1,12 @@
 package net.sansa_stack.kgml.rdf
 
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.types.{StructType, _}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.storage.StorageLevel
+
+import scala.reflect.ClassTag
 
 /**
   * Created by afshin on 07.03.18.
@@ -27,9 +31,9 @@ class Matching(sparkSession: SparkSession) {
     if (S == null) null
     else if (S.length > 0 && S.startsWith("<")) {
       try { //handling special case of Drugbank that puts casRegistryName in URIs, matching between literlas and uri
-     //   var str = S.split("<")(1).split(">")(0).split("/").last
-      //  if (str.endsWith(" .")) str = str.drop(2)
-       // str
+        //   var str = S.split("<")(1).split(">")(0).split("/").last
+        //  if (str.endsWith(" .")) str = str.drop(2)
+        // str
         null
         //println("non literal:" + S)
       } catch {
@@ -326,6 +330,38 @@ only showing top 15 rows
     typeSubjectWithLiteral
   }
 
+
+  def muxPartitions[T: ClassTag](rdd: RDD[T], n: Int, f: (Int, Iterator[T]) => Seq[T],
+                                 persist: StorageLevel): Seq[RDD[T]] = {
+    val mux = rdd.mapPartitionsWithIndex { case (id, itr) =>
+      Iterator.single(f(id, itr))
+    }.persist(persist)
+    Vector.tabulate(n) { j => mux.mapPartitions { itr => Iterator.single(itr.next()(j)) } }
+  }
+
+  def flatMuxPartitions[T: ClassTag](rdd: RDD[T], n: Int, f: (Int, Iterator[T]) => Seq[TraversableOnce[T]],
+                                     persist: StorageLevel): Seq[RDD[T]] = {
+    val mux = rdd.mapPartitionsWithIndex { case (id, itr) =>
+      Iterator.single(f(id, itr))
+    }.persist(persist)
+    Vector.tabulate(n) { j => mux.mapPartitions { itr => itr.next()(j).toIterator } }
+  }
+
+  import org.apache.spark.storage.StorageLevel._
+
+  def splitSampleMux[T: ClassTag](rdd: RDD[T], n: Int,
+                                  persist: StorageLevel = MEMORY_ONLY,
+                                  seed: Long = 42): Seq[RDD[T]] =
+    this.flatMuxPartitions(rdd, n, (id: Int, data: Iterator[T]) => {
+      scala.util.Random.setSeed(id.toLong * seed)
+      val samples = Vector.fill(n) {
+        scala.collection.mutable.ArrayBuffer.empty[T]
+      }
+      data.foreach { e => samples(scala.util.Random.nextInt(n)) += e }
+      samples
+    }, persist)
+
+
   def scheduleMatching(typeSubjectWithLiteral: DataFrame, memoryInGB: Integer): DataFrame = {
 
 
@@ -342,7 +378,7 @@ only showing top 15 rows
     val clusters = clusteredSubjects.toDF("Subject4", "Subject5", "commonPredicateCount")
 
     val numberOfCommonTriples = clusterRankedCounts.select("CommonPredicates", "comparisonsRequired")
-       .rdd.map(r => (r(0).toString.toInt , r(1).toString.toInt )).sortByKey(false, 1).collect()
+      .rdd.map(r => (r(0).toString.toInt, r(1).toString.toInt)).sortByKey(false, 1).collect()
 
     val lengthOfNumberOfCommonTriples = numberOfCommonTriples.length
 
@@ -357,57 +393,94 @@ only showing top 15 rows
     val slotSize = 40000 // This is the maximum number of pairs that fit in 4 Gig heap memory
     val slots = memoryInGB / defaultMemoryForSlotSize
 
+    val schema1 = new StructType()
+      .add(StructField("Subject1", StringType, true))
+      .add(StructField("Subject2", StringType, true))
 
-    var matchedUnion = matchedPredicateTriplesSum //just to inherit type of Data Frame
+    val matchedEmptyRDD = sparkSession.sparkContext.parallelize(Seq(Row("Subject1", "Subject2")))
+    var matchedUnion = sparkSession.createDataFrame(matchedEmptyRDD, schema1) //just to inherit type of Data Frame
 
     for (x <- 1 to lengthOfNumberOfCommonTriples) {
 
-      println("commonPredicate loop number " + x + " from " + lengthOfNumberOfCommonTriples)
+      println("commonPredicate subjects loop number " + x + " from " + lengthOfNumberOfCommonTriples)
 
       //var requiredSlots = matchedPredicateTriplesSum.collect.head(0).toString.toInt / slotSize
-      var requiredSlots = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x )._2 / slotSize
+      var requiredSlots = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x)._2 / slotSize
       var requiredRepetition = 1
       if (requiredSlots > slots) requiredRepetition = requiredSlots / slots
 
-      val commonPredicates = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x )._1.toString
-      println("processing triples with number of commonPredicates equal to" + commonPredicates )
+      val commonPredicates = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x)._1.toString
+      println("processing triples with number of commonPredicates equal to " + commonPredicates)
 
       var cluster = clusters.where(clusters("commonPredicateCount") === commonPredicates)
 
-      var arr = Array.fill(requiredRepetition)(1.0)
-      val clustersArray = cluster.randomSplit(arr)
 
-      for (y <- 0 until requiredRepetition) {
-        println("block loop number " + y + " from " + requiredRepetition)
-
-
-        val firstMatchingLevel = typeSubjectWithLiteral.join(clustersArray(y),
-          typeSubjectWithLiteral("subject1") === clusters("Subject4") &&
-            typeSubjectWithLiteral("subject2") === clusters("Subject5")
-           , "inner" //  && here Must filter a portion of slotSize fot each count and put that in a memory block
-        )
-        // it is better to start from count 1 and increase becasue they are more atomic and most probably are label or name
-        // But can happen that many pairs have one common predicate so I should break them too and those that have a big number of comparison also are taking the memory.
-
-        // block typeSubjectWithLiteral here based on clusteredSubjects
-        // redistribute result of distribution such that gain cluster of equal size
-
-        //suppose 10000 comparison fits in memory. start with the biggest one that has not less than
-
-        //another case is that one block is very big. for example all the data is unified and had 8 links to compare. This
-        // filtering method alone will not solve it. We have to break a big block to smaller ones.
-        firstMatchingLevel.show(40, 80)
-
-        if (x < 2) {
-          var matched = getMatchedEntities(firstMatchingLevel)
-          matchedUnion = matched
-        } else {
-          val matched = getMatchedEntities(firstMatchingLevel)
-          matchedUnion = matchedUnion.union(matched)
-        }
-      }
+      //matchedUnion = this.matchACluster(requiredRepetition,typeSubjectWithLiteral , cluster, matchedUnion)
+      matchedUnion = this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster, matchedUnion)
     }
     matchedUnion
+  }
+
+
+  def matchAClusterOptimized(requiredRepetition: Int, typeSubjectWithLiteral: DataFrame,
+                             cluster: DataFrame, matchedUnion: DataFrame): DataFrame = {
+
+    var localUnion = matchedUnion
+    val clustersSeq = this.splitSampleMux(cluster.rdd, requiredRepetition, MEMORY_ONLY, 0)
+    val schema = new StructType()
+      .add(StructField("Subject4", StringType, true))
+      .add(StructField("Subject5", StringType, true))
+      .add(StructField("commonPredicateCount", LongType, true))
+
+    clustersSeq.foreach(a => {
+      val b = sparkSession.createDataFrame(a, schema)
+      val firstMatchingLevel = typeSubjectWithLiteral.join(b,
+        typeSubjectWithLiteral("subject1") === b("Subject4") &&
+          typeSubjectWithLiteral("subject2") === b("Subject5")
+        , "inner") //  && here Must filter a portion of slotSize fot each count and put that in a memory block
+      firstMatchingLevel.show(40, 80)
+
+
+      var matched = getMatchedEntities(firstMatchingLevel)
+      localUnion = matchedUnion.union(matched)
+
+    })
+    localUnion
+  }
+
+
+  def matchACluster(requiredRepetition: Int, typeSubjectWithLiteral: DataFrame,
+                    cluster: DataFrame, matchedUnion: DataFrame): DataFrame = {
+
+    var arr = Array.fill(requiredRepetition)(1.0 / requiredRepetition)
+    val clustersArray = cluster.randomSplit(arr)
+
+    var localUnion = matchedUnion
+    for (y <- 0 until requiredRepetition) {
+      println("block loop number " + y + " from " + requiredRepetition)
+
+
+      val firstMatchingLevel = typeSubjectWithLiteral.join(clustersArray(y),
+        typeSubjectWithLiteral("subject1") === clustersArray(y)("Subject4") &&
+          typeSubjectWithLiteral("subject2") === clustersArray(y)("Subject5")
+        , "inner" //  && here Must filter a portion of slotSize fot each count and put that in a memory block
+      )
+      // it is better to start from count 1 and increase becasue they are more atomic and most probably are label or name
+      // But can happen that many pairs have one common predicate so I should break them too and those that have a big number of comparison also are taking the memory.
+
+      // block typeSubjectWithLiteral here based on clusteredSubjects
+      // redistribute result of distribution such that gain cluster of equal size
+
+      //suppose 10000 comparison fits in memory. start with the biggest one that has not less than
+
+      //another case is that one block is very big. for example all the data is unified and had 8 links to compare. This
+      // filtering method alone will not solve it. We have to break a big block to smaller ones.
+      firstMatchingLevel.show(40, 80)
+
+      val matched = getMatchedEntities(firstMatchingLevel)
+      localUnion = matchedUnion.union(matched)
+    }
+    localUnion
   }
 
   def getMatchedEntities(firstMatchingLevel: DataFrame): DataFrame = {

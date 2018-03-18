@@ -3,6 +3,7 @@ package net.sansa_stack.kgml.rdf
 import breeze.linalg.max
 import net.didion.jwnl.data.POS
 import net.sansa_stack.kgml.rdf.wordnet.{Synset, WordNet}
+import scala.math._
 
 /**
   * Created by afshin on 26.10.17.
@@ -220,6 +221,27 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
     }else{
       this.getPredicateSimilarity(string1, string2)
     }
+  }
+
+  /*
+
+    string simlarity based on common string length
+   */
+  def stringDistanceSimilarity(s1: String, s2: String): Double ={
+    2*(min(s1.length , s2.length)- levenshteinDistance(s1,s2)) / (s1.length + s2.length)
+  }
+
+
+/*
+  levenshtein string similarity measure
+ */
+  def levenshteinDistance(s1: String, s2: String) : Double = {
+    def minimum(i1: Int, i2: Int, i3: Int) = min(min(i1, i2), i3)
+    val dist = Array.tabulate(s2.length + 1, s1.length + 1) { (j, i) => if (j == 0) i else if (i == 0) j else 0 }
+    for (j <- 1 to s2.length; i <- 1 to s1.length)
+      dist(j)(i) = if (s2(j - 1) == s1(i - 1)) dist(j - 1)(i - 1)
+      else minimum(dist(j - 1)(i) + 1, dist(j)(i - 1) + 1, dist(j - 1)(i - 1) + 1)
+    dist(s2.length)(s1.length)
   }
 
 }
