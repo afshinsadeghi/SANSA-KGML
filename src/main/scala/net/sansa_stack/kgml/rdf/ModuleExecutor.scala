@@ -56,7 +56,8 @@ object ModuleExecutor {
     println(input3)
     val gb = 1024*1024*1024
     val runTime = Runtime.getRuntime
-    val memory = (runTime.maxMemory / gb).toInt
+    var memory = (runTime.maxMemory / gb).toInt
+    if (memory == 0) memory = 1
     println("dedicated memory:   " + memory + " gb") //1 GB is the default memory of spark
 
     val sparkSession = SparkSession.builder

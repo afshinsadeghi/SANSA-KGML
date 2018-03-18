@@ -415,8 +415,8 @@ only showing top 15 rows
       var cluster = clusters.where(clusters("commonPredicateCount") === commonPredicates)
 
 
-      //matchedUnion = this.matchACluster(requiredRepetition,typeSubjectWithLiteral , cluster, matchedUnion)
-      matchedUnion = this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster, matchedUnion)
+      matchedUnion = this.matchACluster(requiredRepetition,typeSubjectWithLiteral , cluster, matchedUnion)
+      //matchedUnion = this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster, matchedUnion)
     }
     matchedUnion
   }
@@ -505,4 +505,16 @@ only showing top 15 rows
     typedTriples3.show()
     subjects
   }
+
+  //def getMatchedEntities(secondMatchingLevel: DataFrame , firstMatchedLevelEntities: DataFrame): DataFrame = {
+
+     // this time the comparison is predicate based, so remove literal based comparison in
+   // 1. wordnet comparison
+   // 2. in the column based literal process
+    // then must fetch each triple from the matched dataset and check if a,b,c and a2,b,c exist
+    //then those entities that have a matched relation in the comparion must have added similarity
+
+
+
+  //}
 }
