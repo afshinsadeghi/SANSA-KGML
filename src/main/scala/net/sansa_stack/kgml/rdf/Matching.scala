@@ -415,23 +415,28 @@ only showing top 15 rows
       var cluster = clusters.where(clusters("commonPredicateCount") === commonPredicates)
 
 
-      matchedUnion = this.matchACluster(requiredRepetition,typeSubjectWithLiteral , cluster, matchedUnion)
-      //matchedUnion = this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster, matchedUnion)
+      //var matched = this.matchACluster(requiredRepetition,typeSubjectWithLiteral , cluster)
+      var matched = this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster)
+
+      if (x == 0)matchedUnion = matched
+      else matchedUnion = matchedUnion.union(matched)
     }
     matchedUnion
   }
 
 
   def matchAClusterOptimized(requiredRepetition: Int, typeSubjectWithLiteral: DataFrame,
-                             cluster: DataFrame, matchedUnion: DataFrame): DataFrame = {
-
-    var localUnion = matchedUnion
+                             cluster: DataFrame): DataFrame = {
+    var values = List("Subject1", "Subject2")
+    val sp = SparkSession.builder().master("local").getOrCreate()
+    import sp.implicits._
+    var localUnion = values.toDF("Subject1", "Subject2")
     val clustersSeq = this.splitSampleMux(cluster.rdd, requiredRepetition, MEMORY_ONLY, 0)
     val schema = new StructType()
       .add(StructField("Subject4", StringType, true))
       .add(StructField("Subject5", StringType, true))
       .add(StructField("commonPredicateCount", LongType, true))
-
+ val counter = 0
     clustersSeq.foreach(a => {
       val b = sparkSession.createDataFrame(a, schema)
       val firstMatchingLevel = typeSubjectWithLiteral.join(b,
@@ -440,9 +445,9 @@ only showing top 15 rows
         , "inner") //  && here Must filter a portion of slotSize fot each count and put that in a memory block
       firstMatchingLevel.show(40, 80)
 
-
       var matched = getMatchedEntities(firstMatchingLevel)
-      localUnion = matchedUnion.union(matched)
+      if (counter == 0)localUnion = matched
+      else localUnion = localUnion.union(matched)
 
     })
     localUnion
@@ -450,12 +455,16 @@ only showing top 15 rows
 
 
   def matchACluster(requiredRepetition: Int, typeSubjectWithLiteral: DataFrame,
-                    cluster: DataFrame, matchedUnion: DataFrame): DataFrame = {
+                    cluster: DataFrame): DataFrame = {
+
+    var values = List("Subject1", "Subject2")
+    val sp = SparkSession.builder().master("local").getOrCreate()
+    import sp.implicits._
+    var localUnion = values.toDF("Subject1", "Subject2")
 
     var arr = Array.fill(requiredRepetition)(1.0 / requiredRepetition)
     val clustersArray = cluster.randomSplit(arr)
 
-    var localUnion = matchedUnion
     for (y <- 0 until requiredRepetition) {
       println("block loop number " + y + " from " + requiredRepetition)
 
@@ -477,8 +486,9 @@ only showing top 15 rows
       // filtering method alone will not solve it. We have to break a big block to smaller ones.
       firstMatchingLevel.show(40, 80)
 
-      val matched = getMatchedEntities(firstMatchingLevel)
-      localUnion = matchedUnion.union(matched)
+      var matched = getMatchedEntities(firstMatchingLevel)
+      if (y == 0)localUnion = matched
+      else localUnion = localUnion.union(matched)
     }
     localUnion
   }
