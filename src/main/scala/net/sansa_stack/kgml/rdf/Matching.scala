@@ -398,7 +398,8 @@ only showing top 15 rows
       .add(StructField("Subject2", StringType, true))
 
     val matchedEmptyRDD = sparkSession.sparkContext.parallelize(Seq(Row("Subject1", "Subject2")))
-    var matchedUnion = sparkSession.createDataFrame(matchedEmptyRDD, schema1) //just to inherit type of Data Frame
+    val matchedEmptyDF = sparkSession.createDataFrame(matchedEmptyRDD, schema1)
+    var matchedUnion = matchedEmptyDF //just to inherit type of Data Frame
 
     for (x <- 1 to lengthOfNumberOfCommonTriples) {
 
@@ -414,11 +415,10 @@ only showing top 15 rows
 
       var cluster = clusters.where(clusters("commonPredicateCount") === commonPredicates)
 
+      var matched = this.matchACluster(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)
+      //var matched = this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)
 
-      //var matched = this.matchACluster(requiredRepetition,typeSubjectWithLiteral , cluster)
-      var matched = this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster)
-
-      if (x == 0)matchedUnion = matched
+      if (x == 0) matchedUnion = matched
       else matchedUnion = matchedUnion.union(matched)
     }
     matchedUnion
@@ -426,17 +426,16 @@ only showing top 15 rows
 
 
   def matchAClusterOptimized(requiredRepetition: Int, typeSubjectWithLiteral: DataFrame,
-                             cluster: DataFrame): DataFrame = {
-    var values = List("Subject1", "Subject2")
-    val sp = SparkSession.builder().master("local").getOrCreate()
-    import sp.implicits._
-    var localUnion = values.toDF("Subject1", "Subject2")
+                             cluster: DataFrame, matchedEmptyDF: DataFrame): DataFrame = {
+
+
+    var localUnion = matchedEmptyDF //just to inherit type of Data Frame
     val clustersSeq = this.splitSampleMux(cluster.rdd, requiredRepetition, MEMORY_ONLY, 0)
     val schema = new StructType()
       .add(StructField("Subject4", StringType, true))
       .add(StructField("Subject5", StringType, true))
       .add(StructField("commonPredicateCount", LongType, true))
- val counter = 0
+    val counter = 0
     clustersSeq.foreach(a => {
       val b = sparkSession.createDataFrame(a, schema)
       val firstMatchingLevel = typeSubjectWithLiteral.join(b,
@@ -446,7 +445,7 @@ only showing top 15 rows
       firstMatchingLevel.show(40, 80)
 
       var matched = getMatchedEntities(firstMatchingLevel)
-      if (counter == 0)localUnion = matched
+      if (counter == 0) localUnion = matched
       else localUnion = localUnion.union(matched)
 
     })
@@ -455,12 +454,9 @@ only showing top 15 rows
 
 
   def matchACluster(requiredRepetition: Int, typeSubjectWithLiteral: DataFrame,
-                    cluster: DataFrame): DataFrame = {
+                    cluster: DataFrame, matchedEmptyDF: DataFrame): DataFrame = {
 
-    var values = List("Subject1", "Subject2")
-    val sp = SparkSession.builder().master("local").getOrCreate()
-    import sp.implicits._
-    var localUnion = values.toDF("Subject1", "Subject2")
+    var localUnion = matchedEmptyDF //just to inherit type of Data Frame
 
     var arr = Array.fill(requiredRepetition)(1.0 / requiredRepetition)
     val clustersArray = cluster.randomSplit(arr)
@@ -487,7 +483,7 @@ only showing top 15 rows
       firstMatchingLevel.show(40, 80)
 
       var matched = getMatchedEntities(firstMatchingLevel)
-      if (y == 0)localUnion = matched
+      if (y == 0) localUnion = matched
       else localUnion = localUnion.union(matched)
     }
     localUnion
@@ -518,12 +514,11 @@ only showing top 15 rows
 
   //def getMatchedEntities(secondMatchingLevel: DataFrame , firstMatchedLevelEntities: DataFrame): DataFrame = {
 
-     // this time the comparison is predicate based, so remove literal based comparison in
-   // 1. wordnet comparison
-   // 2. in the column based literal process
-    // then must fetch each triple from the matched dataset and check if a,b,c and a2,b,c exist
-    //then those entities that have a matched relation in the comparion must have added similarity
-
+  // this time the comparison is predicate based, so remove literal based comparison in
+  // 1. wordnet comparison
+  // 2. in the column based literal process
+  // then must fetch each triple from the matched dataset and check if a,b,c and a2,b,c exist
+  //then those entities that have a matched relation in the comparion must have added similarity
 
 
   //}
