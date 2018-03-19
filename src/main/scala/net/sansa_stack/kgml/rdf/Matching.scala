@@ -403,7 +403,7 @@ only showing top 15 rows
 
     for (x <- 1 to lengthOfNumberOfCommonTriples) {
 
-      println("commonPredicate subjects loop number " + x + " from " + lengthOfNumberOfCommonTriples)
+      //println("commonPredicate subjects loop number " + x + " from " + lengthOfNumberOfCommonTriples)
 
       //var requiredSlots = matchedPredicateTriplesSum.collect.head(0).toString.toInt / slotSize
       var requiredSlots = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x)._2 / slotSize
@@ -411,12 +411,12 @@ only showing top 15 rows
       if (requiredSlots > slots) requiredRepetition = requiredSlots / slots
 
       val commonPredicates = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x)._1.toString
-      println("processing triples with number of commonPredicates equal to " + commonPredicates)
+      println("In bigger loop: processing triples with number of commonPredicates equal to " + commonPredicates)
 
       var cluster = clusters.where(clusters("commonPredicateCount") === commonPredicates)
 
-      var matched = this.matchACluster(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)
-      //var matched = this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)
+      //var matched = this.matchACluster(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)
+      var matched = this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)
 
       if (x == 0) matchedUnion = matched
       else matchedUnion = matchedUnion.union(matched)
@@ -435,7 +435,7 @@ only showing top 15 rows
       .add(StructField("Subject4", StringType, true))
       .add(StructField("Subject5", StringType, true))
       .add(StructField("commonPredicateCount", LongType, true))
-    val counter = 0
+    var counter = 0
     clustersSeq.foreach(a => {
       val b = sparkSession.createDataFrame(a, schema)
       val firstMatchingLevel = typeSubjectWithLiteral.join(b,
@@ -447,7 +447,8 @@ only showing top 15 rows
       var matched = getMatchedEntities(firstMatchingLevel)
       if (counter == 0) localUnion = matched
       else localUnion = localUnion.union(matched)
-
+      println("Block loop number " + counter + " from " + requiredRepetition)
+      counter = counter + 1
     })
     localUnion
   }
