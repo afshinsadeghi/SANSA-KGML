@@ -34,7 +34,15 @@ object TestMuxPartitioning {
     println("the input: ")
     rdd.foreach(println)
     println("result: ")
-    result.foreach(a => a.collect().foreach(println))
+    var counter = 1
+    result.foreach(a =>{
+
+      println(counter)
+      a.collect().foreach(println)
+      counter = counter + 1
+    })
+    println("printing counter after the foreach: " + counter)
+
 
   }
   def muxPartitions[T :ClassTag](rdd: RDD[T],n: Int, f: (Int, Iterator[T]) => Seq[T],

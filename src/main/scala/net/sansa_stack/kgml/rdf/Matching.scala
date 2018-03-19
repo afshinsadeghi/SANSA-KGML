@@ -413,13 +413,16 @@ only showing top 15 rows
       val commonPredicates = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x)._1.toString
       println("In bigger loop: processing triples with number of commonPredicates equal to " + commonPredicates)
 
-      var cluster = clusters.where(clusters("commonPredicateCount") === commonPredicates)
+      var cluster = profile{ clusters.where(clusters("commonPredicateCount") === commonPredicates)}
 
       //var matched = this.matchACluster(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)
-      var matched = this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)
+      var matched = profile{ this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)}
 
-      if (x == 0) matchedUnion = matched
-      else matchedUnion = matchedUnion.union(matched)
+      if (x == 0) {matchedUnion = matched}
+      else {
+        println("doing union")
+        matchedUnion = profile {matchedUnion.union(matched)}
+      }
     }
     matchedUnion
   }
@@ -435,19 +438,20 @@ only showing top 15 rows
       .add(StructField("Subject4", StringType, true))
       .add(StructField("Subject5", StringType, true))
       .add(StructField("commonPredicateCount", LongType, true))
-    var counter = 0
+    var counter = 1
     clustersSeq.foreach(a => {
       val b = sparkSession.createDataFrame(a, schema)
       val firstMatchingLevel = typeSubjectWithLiteral.join(b,
         typeSubjectWithLiteral("subject1") === b("Subject4") &&
           typeSubjectWithLiteral("subject2") === b("Subject5")
         , "inner") //  && here Must filter a portion of slotSize fot each count and put that in a memory block
-      firstMatchingLevel.show(40, 80)
-
+      var report = false
+      if (report) {
+        firstMatchingLevel.show(40, 80)
+      }
       var matched = getMatchedEntities(firstMatchingLevel)
-      if (counter == 0) localUnion = matched
-      else localUnion = localUnion.union(matched)
-      println("Block loop number " + counter + " from " + requiredRepetition)
+      localUnion.union(matched)
+      println("In parallel cluster number " + counter + " from " + requiredRepetition)
       counter = counter + 1
     })
     localUnion
@@ -463,7 +467,7 @@ only showing top 15 rows
     val clustersArray = cluster.randomSplit(arr)
 
     for (y <- 0 until requiredRepetition) {
-      println("block loop number " + y + " from " + requiredRepetition)
+      println("block loop number " + y + 1 + " from " + requiredRepetition)
 
 
       val firstMatchingLevel = typeSubjectWithLiteral.join(clustersArray(y),
@@ -481,8 +485,10 @@ only showing top 15 rows
 
       //another case is that one block is very big. for example all the data is unified and had 8 links to compare. This
       // filtering method alone will not solve it. We have to break a big block to smaller ones.
-      firstMatchingLevel.show(40, 80)
-
+      var report = false
+      if (report) {
+        firstMatchingLevel.show(40, 80)
+      }
       var matched = getMatchedEntities(firstMatchingLevel)
       if (y == 0) localUnion = matched
       else localUnion = localUnion.union(matched)
@@ -498,18 +504,21 @@ only showing top 15 rows
     val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
     import sparkSession.sqlContext.implicits._
     val matched = rdd1.toDF("Subject1", "Subject2", "equal")
-
-    matched.show(40)
-
+    var report = false
+    if (report) {
+      matched.show(40)
+    }
     matched.createOrReplaceTempView("matched")
     val sqlText1 = "SELECT Subject1, Subject2 FROM matched where equal = true"
     val subjects = sparkSession.sql(sqlText1)
-    subjects.show(50, 80)
-
+    if (report) {
+      subjects.show(50, 80)
+    }
     println("the number of matched pair of subjects that are paired by matched predicate and matched literals")
     val sqlText3 = "SELECT count(*) FROM matched where equal = true"
     val typedTriples3 = sparkSession.sql(sqlText3)
     typedTriples3.show()
+
     subjects
   }
 
@@ -518,9 +527,21 @@ only showing top 15 rows
   // this time the comparison is predicate based, so remove literal based comparison in
   // 1. wordnet comparison
   // 2. in the column based literal process
-  // then must fetch each triple from the matched dataset and check if a,b,c and a2,b,c exist
+  // then must fetch
+  //
+  // 3.add matched subject1 to a column to subject2 as subjectMatched (instead of fetching each triple from the matched dataset)
+  // and check if a,b,c and a2,b,c exist
   //then those entities that have a matched relation in the comparion must have added similarity
 
 
   //}
+
+
+  def profile[R](block: => R): R = {
+    val t0 = System.nanoTime()
+    val result = block // call-by-name
+    val t1 = System.nanoTime()
+    println("Elapsed time: " + (t1 - t0) / 1000000000.00 + "s")
+    result
+  }
 }
