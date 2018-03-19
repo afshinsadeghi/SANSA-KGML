@@ -6,6 +6,7 @@ import org.apache.spark.sql.types.{StructType, _}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
+import scala.math.min
 import scala.reflect.ClassTag
 
 /**
@@ -327,6 +328,7 @@ only showing top 15 rows
     // We cover two cases, when ids are embedded into URI and not literals, as in case of Drug bank data set
     // There is also a chance that entities from both kgs
     // refer to same KG using sameAs link.
+    typeSubjectWithLiteral.cache()
     typeSubjectWithLiteral
   }
 
@@ -497,9 +499,9 @@ only showing top 15 rows
   }
 
   def getMatchedEntities(firstMatchingLevel: DataFrame): DataFrame = {
-    val wordNetSim = new SimilarityHandler(0.5)
+    val simHandler = new SimilarityHandler(0.5)
     val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(2),
-      wordNetSim.areLiteralsEqual(x.getString(1), x.getString(3))))
+      simHandler.areLiteralsEqual(x.getString(1), x.getString(3))))
 
     val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
     import sparkSession.sqlContext.implicits._
@@ -535,6 +537,7 @@ only showing top 15 rows
 
 
   //}
+
 
 
   def profile[R](block: => R): R = {

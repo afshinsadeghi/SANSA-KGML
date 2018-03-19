@@ -45,6 +45,13 @@ class TypeStats(sparkSession: SparkSession) {
     }
   })
 
+  def getURIEnding(str: String): String = {
+    var ending1 = str.split("<")(1).split(">")(0).split("/").last
+    if (ending1.endsWith(" .")) ending1 = ending1.drop(2)
+    //println(ending1)
+    ending1
+  }
+
   def calculateStats(triplesRDD1: RDD[(Triple)], triplesRDD2: RDD[(Triple)]): Unit = {
 
 
@@ -128,8 +135,10 @@ class TypeStats(sparkSession: SparkSession) {
 
 
   // Blocking strategy based on types: we take those subject that have the most common types in one partition
-
-  def getMaxCommonTypes(df1: DataFrame, df2: DataFrame): Unit = {
+/*
+  This function can be called when executor is set to CommonTypes
+ */
+  def getMaxCommonTypes(df1: DataFrame, df2: DataFrame): DataFrame = {
 
 
     df1.createOrReplaceTempView("triple1")
@@ -150,10 +159,75 @@ class TypeStats(sparkSession: SparkSession) {
     val samePredicate = typedTriples.join(typedTriples2, typedTriples("predicate1") <=> typedTriples2("predicate2")) //they are all types
     samePredicate.show(12, 80)
 
+
+    val ranking =  this.rankPredicates(df1: DataFrame, df2: DataFrame )
+  ranking
   }
 
+  def rankPredicates(df1: DataFrame, df2: DataFrame): DataFrame ={
 
-  def RankDFSubjectsByType(df1: DataFrame, df2: DataFrame): Unit = {
+
+
+    df1.createOrReplaceTempView("triple")
+    df2.createOrReplaceTempView("triple2")
+    val dF2 = (df1.select(df1("predicate1")).distinct).crossJoin(df2.select(df2("predicate2")).distinct)
+
+
+    val wordNetSim = new SimilarityHandler(0.5)
+    val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
+      wordNetSim.arePredicatesEqual(getURIEnding(x.getString(0)),
+        getURIEnding(x.getString(1)))))
+
+
+    val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
+    import sparkSession.sqlContext.implicits._
+    var matched0 = rdd1.toDF("predicate1", "predicate2", "equal")
+
+    matched0.createOrReplaceTempView("triple1")
+    val sqlText1 = "SELECT predicate1, predicate2 FROM triple1 where equal = true"
+    val matched = sparkSession.sql(sqlText1)
+
+
+    val predicatesPairs = matched.toDF("Predicate3", "Predicate4")
+    df1.createOrReplaceTempView("triple")
+    df2.createOrReplaceTempView("triple2")
+    val samePredicate = df1.
+      join(predicatesPairs, df1("predicate1") <=> predicatesPairs("Predicate3")).join(df2, predicatesPairs("Predicate4") <=> df2("predicate2") )
+
+
+    samePredicate.createOrReplaceTempView("sameTypes")
+    println("ranking of predicates")
+    val sqlText2 = "SELECT  predicate1, predicate2, COUNT(*) FROM sameTypes group by predicate1, predicate2 ORDER BY COUNT(*) DESC"
+    val typedTriples2 = sparkSession.sql(sqlText2)
+    typedTriples2.show(15, 80)
+
+    /*
+    For person data set
+
+    ranking of predicates
++---------------------------------------------------------+---------------------------------------------------------+--------+
+|                                               predicate1|                                               predicate2|count(1)|
++---------------------------------------------------------+---------------------------------------------------------+--------+
+|        <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>|        <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>| 2000000|
+| <http://www.okkam.org/ontology_person1.owl#house_number>| <http://www.okkam.org/ontology_person2.owl#house_number>|  250000|
+|  <http://www.okkam.org/ontology_person1.owl#phone_numer>|  <http://www.okkam.org/ontology_person2.owl#phone_numer>|  250000|
+|          <http://www.okkam.org/ontology_person1.owl#age>|          <http://www.okkam.org/ontology_person2.owl#age>|  250000|
+|   <http://www.okkam.org/ontology_person1.owl#soc_sec_id>|   <http://www.okkam.org/ontology_person2.owl#soc_sec_id>|  250000|
+|  <http://www.okkam.org/ontology_person1.owl#has_address>|  <http://www.okkam.org/ontology_person2.owl#has_address>|  250000|
+|      <http://www.okkam.org/ontology_person1.owl#surname>|      <http://www.okkam.org/ontology_person2.owl#surname>|  250000|
+|       <http://www.okkam.org/ontology_person1.owl#street>|       <http://www.okkam.org/ontology_person2.owl#street>|  250000|
+|   <http://www.okkam.org/ontology_person1.owl#given_name>|   <http://www.okkam.org/ontology_person2.owl#given_name>|  250000|
+|     <http://www.okkam.org/ontology_person1.owl#postcode>|     <http://www.okkam.org/ontology_person2.owl#postcode>|  250000|
+|<http://www.okkam.org/ontology_person1.owl#date_of_birth>|<http://www.okkam.org/ontology_person2.owl#date_of_birth>|  250000|
++---------------------------------------------------------+---------------------------------------------------------+--------+
+
+
+     */
+
+    typedTriples2
+  }
+
+  def rankDFSubjectsByType(df1: DataFrame, df2: DataFrame): Unit = {
 
     val dF1 = df1.
       withColumn("Literal1", getLiteralValue(col("object1")))

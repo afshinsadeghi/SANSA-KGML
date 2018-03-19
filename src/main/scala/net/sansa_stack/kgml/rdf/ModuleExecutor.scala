@@ -36,10 +36,10 @@ object ModuleExecutor {
     } else {
       println("module name to run is not set. running with default values:")
 
-      println("current modules are: TypeStats,CommonTypes,RankByType,PredicateMatching,PredicatePartitioning," +
-        "BlockSubjectsByTypeAndLiteral,CountSameASLinks")
+      println("current modules are: PredicateStats,CommonPredicateStats,RankByPredicateType,PredicateMatching,PredicatePartitioning," +
+        "BlockSubjectsByTypeAndLiteral,CountSameASLinks,EntityMatching")
 
-      input1 = "BlockSubjectsByTypeAndLiteral"
+      input1 = "CommonTypes"
       //input2 = "datasets/dbpediamapping50k.nt"
       //input3 = "datasets/yagofact50k.nt"
       //input2 = "datasets/dbpediaOnlyAppleobjects.nt"
@@ -126,7 +126,7 @@ object ModuleExecutor {
     }
 
 
-    if (input1 == "TypeStats") {
+    if (input1 == "PredicateStats") {
 
       val typeStats = new net.sansa_stack.kgml.rdf.TypeStats(sparkSession)
       //typeStats.calculateStats(triplesRDD1, triplesRDD2)
@@ -137,14 +137,14 @@ object ModuleExecutor {
       typeStats.calculateDFStats(df2)
     }
 
-    if (input1 == "CommonTypes") {
+    if (input1 == "CommonPredicateStats") {
       val typeStats = new net.sansa_stack.kgml.rdf.TypeStats(sparkSession)
       typeStats.getMaxCommonTypes(df1, df2)
     }
 
-    if (input1 == "RankByType") {
+    if (input1 == "RankByPredicateType") {
       val typeStats = new net.sansa_stack.kgml.rdf.TypeStats(sparkSession)
-      typeStats.RankDFSubjectsByType(df1, df2)
+      typeStats.rankDFSubjectsByType(df1, df2)
     }
 
 
@@ -157,17 +157,26 @@ object ModuleExecutor {
 
     if (input1 == "BlockSubjectsByTypeAndLiteral") {
 
+      val SubjectsWithLiteral = profile {
+        val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
+        val predicatePairs = matching.getMatchedPredicates(df1, df2)
+        matching.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+      }
+      SubjectsWithLiteral.show(200, 80)
+    }
+
+    if (input1 == "EntityMatching") {
       val matchedEntites = profile {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
         val predicatePairs = matching.getMatchedPredicates(df1, df2)
         val SubjectsWithLiteral = matching.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
-         matching.scheduleMatching(SubjectsWithLiteral, memory)
+        matching.scheduleMatching(SubjectsWithLiteral, memory)
       }
       matchedEntites.show(200, 80)
       println("number of matched entities pairs: "+ matchedEntites.count.toString)
       matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedSubjects.txt")
-
     }
+
 
     if (input1 == "CountSameASLinks") {
       val typeStats = new net.sansa_stack.kgml.rdf.TypeStats(sparkSession)
