@@ -405,8 +405,9 @@ only showing top 15 rows
       .add(StructField("Subject1", StringType, true))
       .add(StructField("Subject2", StringType, true))
 
-    val matchedEmptyRDD = sparkSession.sparkContext.parallelize(Seq(Row("", "")))
-    val matchedEmptyDF = sparkSession.createDataFrame(matchedEmptyRDD, schema1)
+
+    import sparkSession.sqlContext.implicits._
+    val matchedEmptyDF = Seq.empty[(String, String)].toDF("Subject1", "Subject2")
     var matchedUnion = matchedEmptyDF //just to inherit type of Data Frame
 
     for (x <- 1 to lengthOfNumberOfCommonTriples) {
