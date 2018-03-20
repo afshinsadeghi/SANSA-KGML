@@ -39,7 +39,7 @@ object ModuleExecutor {
       println("current modules are: PredicateStats,CommonPredicateStats,RankByPredicateType,PredicateMatching,PredicatePartitioning," +
         "BlockSubjectsByTypeAndLiteral,CountSameASLinks,EntityMatching")
 
-      input1 = "CommonTypes"
+      input1 = "EntityMatching"
       //input2 = "datasets/dbpediamapping50k.nt"
       //input3 = "datasets/yagofact50k.nt"
       //input2 = "datasets/dbpediaOnlyAppleobjects.nt"

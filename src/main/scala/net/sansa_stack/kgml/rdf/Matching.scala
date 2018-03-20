@@ -12,8 +12,7 @@ import scala.reflect.ClassTag
 /**
   * Created by afshin on 07.03.18.
   */
-class Matching(sparkSession: SparkSession) {
-
+class Matching(sparkSession: SparkSession) extends EvaluationHelper {
 
   val wordNetPredicateMatch = udf((S: String, S2: String) => {
 
@@ -56,10 +55,17 @@ class Matching(sparkSession: SparkSession) {
 
 
   def getURIEnding(str: String): String = {
-    var ending1 = str.split("<")(1).split(">")(0).split("/").last
-    if (ending1.endsWith(" .")) ending1 = ending1.drop(2)
-    //println(ending1)
-    ending1
+    if (str.length > 0 && str.startsWith("<")) {
+      try { //handling only URIs, ignoring literals
+        var ending1 = str.split("<")(1).split(">")(0).split("/").last
+        if (ending1.endsWith(" .")) ending1 = ending1.drop(2)
+        ending1
+      } catch {
+        case e: Exception => null
+      }
+    } else {
+      null
+    }
   }
 
   def getMatchedPredicatesWithSplit(df1: DataFrame, df2: DataFrame): Unit = {
@@ -399,7 +405,7 @@ only showing top 15 rows
       .add(StructField("Subject1", StringType, true))
       .add(StructField("Subject2", StringType, true))
 
-    val matchedEmptyRDD = sparkSession.sparkContext.parallelize(Seq(Row("Subject1", "Subject2")))
+    val matchedEmptyRDD = sparkSession.sparkContext.parallelize(Seq(Row("", "")))
     val matchedEmptyDF = sparkSession.createDataFrame(matchedEmptyRDD, schema1)
     var matchedUnion = matchedEmptyDF //just to inherit type of Data Frame
 
@@ -415,15 +421,23 @@ only showing top 15 rows
       val commonPredicates = numberOfCommonTriples(lengthOfNumberOfCommonTriples - x)._1.toString
       println("In bigger loop: processing triples with number of commonPredicates equal to " + commonPredicates)
 
-      var cluster = profile{ clusters.where(clusters("commonPredicateCount") === commonPredicates)}
+      var cluster = profile {
+        clusters.where(clusters("commonPredicateCount") === commonPredicates)
+      }
 
       //var matched = this.matchACluster(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)
-      var matched = profile{ this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)}
+      var matched = profile {
+        this.matchAClusterOptimized(requiredRepetition, typeSubjectWithLiteral, cluster, matchedEmptyDF)
+      }
 
-      if (x == 0) {matchedUnion = matched}
+      if (x == 0) {
+        matchedUnion = matched
+      }
       else {
         println("doing union")
-        matchedUnion = profile {matchedUnion.union(matched)}
+        matchedUnion = profile {
+          matchedUnion.union(matched)
+        }
       }
     }
     matchedUnion
@@ -447,11 +461,16 @@ only showing top 15 rows
         typeSubjectWithLiteral("subject1") === b("Subject4") &&
           typeSubjectWithLiteral("subject2") === b("Subject5")
         , "inner") //  && here Must filter a portion of slotSize fot each count and put that in a memory block
-      var report = false
-      if (report) {
+      if (printReport) {
+        println("firstMatchingLevel: ")
         firstMatchingLevel.show(40, 80)
       }
       var matched = getMatchedEntities(firstMatchingLevel)
+      if (printReport) {
+        println("matched: ")
+        matched.show(40, 80)
+      }
+
       localUnion.union(matched)
       println("In parallel cluster number " + counter + " from " + requiredRepetition)
       counter = counter + 1
@@ -487,8 +506,7 @@ only showing top 15 rows
 
       //another case is that one block is very big. for example all the data is unified and had 8 links to compare. This
       // filtering method alone will not solve it. We have to break a big block to smaller ones.
-      var report = false
-      if (report) {
+      if (printReport) {
         firstMatchingLevel.show(40, 80)
       }
       var matched = getMatchedEntities(firstMatchingLevel)
@@ -499,21 +517,20 @@ only showing top 15 rows
   }
 
   def getMatchedEntities(firstMatchingLevel: DataFrame): DataFrame = {
-    val simHandler = new SimilarityHandler(0.5)
+    val simHandler = new SimilarityHandler(0.7)
     val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(2),
       simHandler.areLiteralsEqual(x.getString(1), x.getString(3))))
 
     val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
     import sparkSession.sqlContext.implicits._
     val matched = rdd1.toDF("Subject1", "Subject2", "equal")
-    var report = false
-    if (report) {
+    if (printReport) {
       matched.show(40)
     }
     matched.createOrReplaceTempView("matched")
     val sqlText1 = "SELECT Subject1, Subject2 FROM matched where equal = true"
     val subjects = sparkSession.sql(sqlText1)
-    if (report) {
+    if (printReport) {
       subjects.show(50, 80)
     }
     println("the number of matched pair of subjects that are paired by matched predicate and matched literals")
@@ -524,27 +541,18 @@ only showing top 15 rows
     subjects
   }
 
-  //def getMatchedEntities(secondMatchingLevel: DataFrame , firstMatchedLevelEntities: DataFrame): DataFrame = {
+  //def getLevel2MatchedEntities(secondMatchingLevel: DataFrame, firstMatchedLevelEntities: DataFrame): DataFrame = {
 
-  // this time the comparison is predicate based, so remove literal based comparison in
-  // 1. wordnet comparison
-  // 2. in the column based literal process
-  // then must fetch
-  //
-  // 3.add matched subject1 to a column to subject2 as subjectMatched (instead of fetching each triple from the matched dataset)
-  // and check if a,b,c and a2,b,c exist
-  //then those entities that have a matched relation in the comparion must have added similarity
+
+    //
+    // 1. wordnet comparison on entities, comparison is URI based, and we ignore literals
+    // 2. in the column based literal process we use string based similarity , we use that similarity (can be sum of probabilites ). we calculate a number for the match
+    // 3.add matched subject1 to a column to subject2 as subjectMatched (instead of fetching each triple from the matched dataset)
+    // and check if a,b,c and a2,b,c exist
+    //then those entities that have a matched relation in the comparison must have added similarity
 
 
   //}
 
 
-
-  def profile[R](block: => R): R = {
-    val t0 = System.nanoTime()
-    val result = block // call-by-name
-    val t1 = System.nanoTime()
-    println("Elapsed time: " + (t1 - t0) / 1000000000.00 + "s")
-    result
-  }
 }
