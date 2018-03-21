@@ -67,7 +67,7 @@ class Matching(sparkSession: SparkSession) extends EvaluationHelper {
       null
     }
   }
-
+/*
   def getMatchedPredicatesWithSplit(df1: DataFrame, df2: DataFrame): Unit = {
 
     //1. First filter all predicates in one column dataframes A and B, I expect all fit into memory
@@ -118,7 +118,7 @@ class Matching(sparkSession: SparkSession) extends EvaluationHelper {
 
 
   }
-
+*/
 
   import org.apache.spark.sql.functions._
 
@@ -324,7 +324,7 @@ only showing top 15 rows
     localUnion
   }
 
-
+/*
   def matchACluster(requiredRepetition: Int, typeSubjectWithLiteral: DataFrame,
                     cluster: DataFrame, matchedEmptyDF: DataFrame): DataFrame = {
 
@@ -361,6 +361,7 @@ only showing top 15 rows
     }
     localUnion
   }
+  */
 
   def getMatchedEntitiesBasedOnLiteralSim(firstMatchingLevel: DataFrame): DataFrame = {
     val simHandler = new SimilarityHandler(0.7)
