@@ -159,8 +159,10 @@ object ModuleExecutor {
 
       val SubjectsWithLiteral = profile {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
-        val predicatePairs = matching.getMatchedPredicates(df1, df2)
-        matching.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        val blocking =  new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
+
+        val predicatePairs = blocking.getMatchedPredicates(df1, df2)
+        blocking.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
       }
       SubjectsWithLiteral.show(200, 80)
     }
@@ -168,13 +170,15 @@ object ModuleExecutor {
     if (input1 == "EntityMatching") {
       val matchedEntites = profile {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
-        val predicatePairs = matching.getMatchedPredicates(df1, df2)
-        val SubjectsWithLiteral = matching.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        val blocking =  new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
+
+        val predicatePairs = blocking.getMatchedPredicates(df1, df2)
+        val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
         matching.scheduleMatching(SubjectsWithLiteral, memory)
       }
       matchedEntites.show(200, 80)
       println("number of matched entities pairs: "+ matchedEntites.count.toString)
-      matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedSubjects.txt")
+      matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedSubjects")
     }
 
 

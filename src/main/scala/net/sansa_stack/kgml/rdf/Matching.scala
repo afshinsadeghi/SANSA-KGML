@@ -119,120 +119,6 @@ class Matching(sparkSession: SparkSession) extends EvaluationHelper {
 
   }
 
-  /**
-    * Returns a two column dataFrame of matched predicates
-    *
-    * @param df1
-    * @param df2
-    * @return
-    */
-  def getMatchedPredicates(df1: DataFrame, df2: DataFrame): DataFrame = {
-
-    //1. First filter all predicates in one column dataframes A and B, I expect all fit into memory
-    //2. make a cartesian comparison of all them.
-    //df1.show(20, 80)
-    //df2.show(20,80)
-    //val dF1 = df1.select(df1("predicate1")).distinct.coalesce(5).persist()
-    //  .withColumn("predicate_ending", getLastPartOfURI(col("object1")))
-
-    //val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
-    val dF2 = (df1.select(df1("predicate1")).distinct).crossJoin(df2.select(df2("predicate2")).distinct)
-    println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
-    //Elapsed time: 90.543716752s
-    //Elapsed time: 85.588292884s without coalesce(10)
-    //    .withColumn("predicate_ending", getLastPartOfURI(col("object2")))
-
-    // val dF3 = dF2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
-
-    //dF3.createOrReplaceTempView("triple")
-
-
-    //val sqlText2 = "SELECT same_predicate, COUNT(*) FROM triple group by same_predicate ORDER BY COUNT(*) DESC"
-    //val predicates = sparkSession.sql(sqlText2)
-    //predicates.show(15, 80)
-
-    //println(predicates.collect().take(20))
-
-
-    val wordNetSim = new SimilarityHandler(0.5)
-    val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
-      wordNetSim.arePredicatesEqual(getURIEnding(x.getString(0)),
-        getURIEnding(x.getString(1)))))
-
-
-    val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
-    import sparkSession.sqlContext.implicits._
-    val matched = rdd1.toDF("predicate1", "predicate2", "equal")
-    //println("matched predicates:")
-    //matched.show(40)
-    //Elapsed time: 92.068153666s
-    //Elapsed time: 103.122292326s with using cache
-    println("number of partitions for matched predicates = " + matched.rdd.partitions.size)
-
-    matched.createOrReplaceTempView("triple1")
-    val sqlText2 = "SELECT predicate1, predicate2 FROM triple1 where equal = true"
-    val predicates = sparkSession.sql(sqlText2)
-    predicates.show(50, 80)
-
-    /*
-
-    The result between drugdunmp dataset and dbpedia
-+----------------------------------------------------------------------------+-------------------------------------------------+
-|                                                                  predicate1|                                       predicate2|
-+----------------------------------------------------------------------------+-------------------------------------------------+
-|                           <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>|<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>|
-|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugbank/molecularWeight>|    <http://dbpedia.org/property/molecularWeight>|
-|                                      <http://www.w3.org/2002/07/owl#sameAs>|           <http://www.w3.org/2002/07/owl#sameAs>|
-|   <http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugbank/meltingPoint>|       <http://dbpedia.org/property/meltingPoint>|
-|         <http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugbank/target>|             <http://dbpedia.org/property/target>|
-|                                <http://www.w3.org/2000/01/rdf-schema#label>|     <http://www.w3.org/2000/01/rdf-schema#label>|
-|           <http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugbank/name>|                 <http://xmlns.com/foaf/0.1/name>|
-|           <http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugbank/name>|               <http://dbpedia.org/property/name>|
-+----------------------------------------------------------------------------+-------------------------------------------------+
-
-in Persons dataset:
-
-+---------------------------------------------------------+---------------------------------------------------------+
-|                                               predicate1|                                               predicate2|
-+---------------------------------------------------------+---------------------------------------------------------+
-|        <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>|        <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>|
-|  <http://www.okkam.org/ontology_person1.owl#phone_numer>|  <http://www.okkam.org/ontology_person2.owl#phone_numer>|
-|          <http://www.okkam.org/ontology_person1.owl#age>|          <http://www.okkam.org/ontology_person2.owl#age>|
-|   <http://www.okkam.org/ontology_person1.owl#given_name>|   <http://www.okkam.org/ontology_person2.owl#given_name>|
-|     <http://www.okkam.org/ontology_person1.owl#postcode>|     <http://www.okkam.org/ontology_person2.owl#postcode>|
-|  <http://www.okkam.org/ontology_person1.owl#has_address>|  <http://www.okkam.org/ontology_person2.owl#has_address>|
-|      <http://www.okkam.org/ontology_person1.owl#surname>|      <http://www.okkam.org/ontology_person2.owl#surname>|
-|       <http://www.okkam.org/ontology_person1.owl#street>|       <http://www.okkam.org/ontology_person2.owl#street>|
-|<http://www.okkam.org/ontology_person1.owl#date_of_birth>|<http://www.okkam.org/ontology_person2.owl#date_of_birth>|
-| <http://www.okkam.org/ontology_person1.owl#house_number>| <http://www.okkam.org/ontology_person2.owl#house_number>|
-|   <http://www.okkam.org/ontology_person1.owl#soc_sec_id>|   <http://www.okkam.org/ontology_person2.owl#soc_sec_id>|
-+---------------------------------------------------------+---------------------------------------------------------+
-
-
-           The output for exact string equality on apple DBpeida:
-       +--------------+--------+
-       |same_predicate|count(1)|
-       +--------------+--------+
-       |         false|   27636|
-       |          true|       3|
-       +--------------+--------+
-     */
-
-    /*
-
-        val sqlText3 = "SELECT predicate1 FROM triple where same_predicate = true"
-        val samePredicates = sparkSession.sql(sqlText3)
-        samePredicates.show(15, 80)
-
-        The output :
-          <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
-                   <http://www.w3.org/2002/07/owl#sameAs>
-             <http://www.w3.org/2000/01/rdf-schema#label>
-
-     */
-    predicates
-  }
-
 
   import org.apache.spark.sql.functions._
 
@@ -297,47 +183,6 @@ only showing top 15 rows
      */
 
   }
-
-  /**
-    * block triples based on matched predicates
-    *
-    * @param df1
-    * @param df2
-    * @param matchedPredicates
-    */
-  def BlockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): DataFrame = {
-
-    val dF1 = df1.
-      withColumn("Literal1", getLiteralValue(col("object1")))
-
-    var dF2 = df2.
-      withColumn("Literal2", getLiteralValue(col("object2")))
-
-    // dF2 = dF2.where($"subject2".contains("http://dbpedia.org/resource/2C-B-BUTTERFLY>"))
-
-    //dF1.show(60, 40)
-    //dF2.show(60, 40)
-    val predicatesPairs = matchedPredicates.toDF("Predicate3", "Predicate4")
-    dF1.createOrReplaceTempView("triple")
-    dF2.createOrReplaceTempView("triple2")
-    val samePredicateSubjectObjects = dF1.
-      join(predicatesPairs, dF1("predicate1") <=> predicatesPairs("Predicate3")).
-      join(dF2, predicatesPairs("Predicate4") <=> dF2("predicate2") && dF2("Literal2").isNotNull && dF1("Literal1").isNotNull)
-
-    samePredicateSubjectObjects.show(70, 50)
-
-    //select from  "Subject1","Predicate1","Object1","Literal1", "Predicate3","Predicate4","Subject2","Predicate2","Object2","Literal2"
-
-    val typeSubjectWithLiteral = samePredicateSubjectObjects.select("Subject1", "Literal1", "Subject2", "Literal2")
-    //The other way round will be comparison of subjects. but if the URI format is hashed based then that is useless.
-    // By comparing filtered objects we compare literals as well.
-    // We cover two cases, when ids are embedded into URI and not literals, as in case of Drug bank data set
-    // There is also a chance that entities from both kgs
-    // refer to same KG using sameAs link.
-    typeSubjectWithLiteral.cache()
-    typeSubjectWithLiteral
-  }
-
 
   def muxPartitions[T: ClassTag](rdd: RDD[T], n: Int, f: (Int, Iterator[T]) => Seq[T],
                                  persist: StorageLevel): Seq[RDD[T]] = {
@@ -466,7 +311,7 @@ only showing top 15 rows
         println("firstMatchingLevel: ")
         firstMatchingLevel.show(40, 80)
       }
-      var matched = getMatchedEntities(firstMatchingLevel)
+      var matched = getMatchedEntitiesBasedOnLiteralSim(firstMatchingLevel)
       if (printReport) {
         println("matched: ")
         matched.show(40, 80)
@@ -510,14 +355,14 @@ only showing top 15 rows
       if (printReport) {
         firstMatchingLevel.show(40, 80)
       }
-      var matched = getMatchedEntities(firstMatchingLevel)
+      var matched = getMatchedEntitiesBasedOnLiteralSim(firstMatchingLevel)
       if (y == 0) localUnion = matched
       else localUnion = localUnion.union(matched)
     }
     localUnion
   }
 
-  def getMatchedEntities(firstMatchingLevel: DataFrame): DataFrame = {
+  def getMatchedEntitiesBasedOnLiteralSim(firstMatchingLevel: DataFrame): DataFrame = {
     val simHandler = new SimilarityHandler(0.7)
     val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(2),
       simHandler.areLiteralsEqual(x.getString(1), x.getString(3))))
@@ -544,21 +389,16 @@ only showing top 15 rows
 
   //def getLevel2MatchedEntities(secondMatchingLevel: DataFrame, firstMatchedLevelEntities: DataFrame): DataFrame = {
 
-
-    //
+//1.    wordnet comparison on entities, comparison is URI based, and we ignore literals
     // 1. wordnet comparison on entities, comparison is URI based, and we ignore literals
     // 2. in the column based literal process we use string based similarity , we use that similarity (can be sum of probabilites ). we calculate a number for the match
     // 3.add matched subject1 to a column to subject2 as subjectMatched (instead of fetching each triple from the matched dataset)
     // and check if a,b,c and a2,b,c exist
     //then those entities that have a matched relation in the comparison must have added similarity
+ // }
 
 
-  //}
+  //rank the predicate and literals that are repeated the most. and give them less similarity point
 
-
-
-  //def blocking
-  // first match predicates by PredicateMatching
-  // then see what predicates are mostly used, do mupleple blocking based on getMaxCommonTypes
 
 }
