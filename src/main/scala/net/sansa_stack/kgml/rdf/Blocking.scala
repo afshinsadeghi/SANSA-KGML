@@ -4,8 +4,6 @@ import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 
-
-
 // Schema agnostic automated blocking
 //1. First match predicates by Wordnet based PredicateMatching
 //2. From last step See which of the predicates have object of type literal take those to use in step 3
@@ -13,7 +11,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 //to see predicates between them are mostly used, you can do multiple blocking based on getMaxCommonTypes and get ranking of the select
 
-class Blocking (sparkSession: SparkSession) extends EvaluationHelper  {
+class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
 
   /*
   * get literal value in objects
@@ -112,8 +110,11 @@ class Blocking (sparkSession: SparkSession) extends EvaluationHelper  {
     matched.createOrReplaceTempView("triple1")
     val sqlText2 = "SELECT predicate1, predicate2 FROM triple1 where equal = true"
     val predicates = sparkSession.sql(sqlText2)
-    predicates.show(50, 80)
 
+    if (printReport) {
+      println("Matched predictes in this step:")
+      predicates.show(50, 80)
+    }
     /*
 
     The result between drugdunmp dataset and dbpedia
@@ -174,9 +175,8 @@ in Persons dataset:
   }
 
 
-
   /**
-    * block triples based on matched predicates
+    * Block triples based on matched predicates
     *
     * @param df1
     * @param df2
@@ -184,16 +184,14 @@ in Persons dataset:
     */
   def BlockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): DataFrame = {
 
+
+    //filter triples with literals by sparkssql
     val dF1 = df1.
       withColumn("Literal1", getLiteralValue(col("object1")))
 
     var dF2 = df2.
       withColumn("Literal2", getLiteralValue(col("object2")))
 
-    // dF2 = dF2.where($"subject2".contains("http://dbpedia.org/resource/2C-B-BUTTERFLY>"))
-
-    //dF1.show(60, 40)
-    //dF2.show(60, 40)
     val predicatesPairs = matchedPredicates.toDF("Predicate3", "Predicate4")
     dF1.createOrReplaceTempView("triple")
     dF2.createOrReplaceTempView("triple2")
@@ -216,10 +214,14 @@ in Persons dataset:
   }
 
 
-  // Blocking strategy based on types: we take those subject that have the most common types in one partition
-  /*
-    This function can be called when executor is set to CommonTypes
-   */
+  /**
+    * Blocking strategy based on types: we take those subject that have the most common types in one partition
+    * This function can be called when executor is set to CommonTypes
+    *
+    * @param df1
+    * @param df2
+    * @return
+    */
   def getMaxCommonTypes(df1: DataFrame, df2: DataFrame): DataFrame = {
 
 
@@ -242,12 +244,18 @@ in Persons dataset:
     samePredicate.show(12, 80)
 
 
-    val ranking =  this.rankPredicates(df1: DataFrame, df2: DataFrame )
+    val ranking = this.rankPredicates(df1: DataFrame, df2: DataFrame)
     ranking
   }
-  def rankPredicates(df1: DataFrame, df2: DataFrame): DataFrame ={
 
 
+  /**
+    *
+    * @param df1
+    * @param df2
+    * @return
+    */
+  def rankPredicates(df1: DataFrame, df2: DataFrame): DataFrame = {
 
     df1.createOrReplaceTempView("triple")
     df2.createOrReplaceTempView("triple2")
@@ -273,15 +281,15 @@ in Persons dataset:
     df1.createOrReplaceTempView("triple")
     df2.createOrReplaceTempView("triple2")
     val samePredicate = df1.
-      join(predicatesPairs, df1("predicate1") <=> predicatesPairs("Predicate3")).join(df2, predicatesPairs("Predicate4") <=> df2("predicate2") )
+      join(predicatesPairs, df1("predicate1") <=> predicatesPairs("Predicate3")).join(df2, predicatesPairs("Predicate4") <=> df2("predicate2"))
 
-
-    samePredicate.createOrReplaceTempView("sameTypes")
-    println("ranking of predicates")
-    val sqlText2 = "SELECT  predicate1, predicate2, COUNT(*) FROM sameTypes group by predicate1, predicate2 ORDER BY COUNT(*) DESC"
-    val typedTriples2 = sparkSession.sql(sqlText2)
-    typedTriples2.show(15, 80)
-
+      samePredicate.createOrReplaceTempView("sameTypes")
+      println("ranking of predicates")
+      val sqlText2 = "SELECT  predicate1, predicate2, COUNT(*) FROM sameTypes group by predicate1, predicate2 ORDER BY COUNT(*) DESC"
+      val typedTriples2 = sparkSession.sql(sqlText2)
+    if (printReport) {
+      typedTriples2.show(15, 80)
+    }
     /*
     For person data set
 

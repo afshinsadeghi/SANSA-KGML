@@ -10,6 +10,9 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.functions.{col, udf}
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.Dataset
 
 case class StringTriples(Subject: String, Predicate: String, Object: String)
 
@@ -39,7 +42,7 @@ object ModuleExecutor {
       println("current modules are: PredicateStats,CommonPredicateStats,RankByPredicateType,PredicateMatching,PredicatePartitioning," +
         "BlockSubjectsByTypeAndLiteral,CountSameASLinks,EntityMatching")
 
-      input1 = "PredicateMatching"
+      input1 = "EntityMatching"
       //input2 = "datasets/dbpediamapping50k.nt"
       //input3 = "datasets/yagofact50k.nt"
       //input2 = "datasets/dbpediaOnlyAppleobjects.nt"
@@ -149,9 +152,9 @@ object ModuleExecutor {
 
 
     if (input1 == "PredicateMatching") {
-      val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
+      val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
       profile {
-        matching.getMatchedPredicates(df1, df2)
+        blocking.getMatchedPredicates(df1, df2)
       }
     }
 
@@ -171,10 +174,18 @@ object ModuleExecutor {
       val matchedEntites = profile {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
         val blocking =  new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
+        val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<")).cache()
+        val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")).cache()
 
-        val predicatePairs = blocking.getMatchedPredicates(df1, df2)
-        val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
-        matching.scheduleMatching(SubjectsWithLiteral, memory)
+        var predicatePairs = blocking.getMatchedPredicates(dfTripleWithLiteral1, dfTripleWithLiteral2)
+
+        val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
+        val literalBasedSubjectMatchs = matching.scheduleLiteralBasedMatching(SubjectsWithLiteral, memory)
+
+        val dfTripleWithNonLiteral1 = df1.filter(col("object1").startsWith("<")).cache()
+        val dfTripleWithNonLiteral2 = df2.filter(col("object2").startsWith("<")).cache()
+        predicatePairs = blocking.getMatchedPredicates(dfTripleWithNonLiteral1, dfTripleWithNonLiteral2)
+        matching.matchdEntitiesBasedOnWordNet(dfTripleWithNonLiteral1,dfTripleWithNonLiteral2, literalBasedSubjectMatchs, predicatePairs)
       }
       matchedEntites.show(200, 80)
       println("number of matched entities pairs: "+ matchedEntites.count.toString)

@@ -134,7 +134,6 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
     isEqual
   }
 
-
   def setThreshold(newThreshold: Double): Unit = {
     threshold = newThreshold
   }

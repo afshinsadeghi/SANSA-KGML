@@ -55,11 +55,11 @@ object Main {
       println(" ")
 
       println("There is no given argument. For example you can give:")
-      input1 = "datasets/dbpediaOnlyAppleobjects.nt"
-      input2 = "datasets/yagoonlyAppleobjects.nt"
+      input1 = "datasets/dbpediaSimple.nt"
+      input2 = "datasets/dbpediaSimple.nt"
 //      input1 = "datasets/DBpediaAppleSmalldataset.nt"
 //      input2 = "datasets/YagoAppleSmallDataset.nt"
-      input3 = "1"
+      input3 = "0"
       input4 = "false" // defauls is true
       input5 = "false"
 
@@ -88,7 +88,8 @@ object Main {
 
     //val input1 = "datasets/dbpedia.nt"
     //val input2 = "datasets/yago.nt"
-
+    input1 = "datasets/dbpediaSimple.nt"
+    input2 = "datasets/dbpediaSimple.nt"
     val sparkSession = SparkSession.builder
       .master("local[*]")
       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
@@ -110,82 +111,29 @@ object Main {
     var makeResult2 = false
     var makeResult3 = false
 
-    if(input3 == "0"){   // General info of the two datasets
+      if(input3 == "0"){   // General info of the two datasets
+        makeResult0 = true
+      }
+      if(input3 == "1"){ // Getting similarity between predicates
+        makeResult1 = true
+      }
+      if(input3 == "2"){ // Getting similarity between literal entities
+        makeResult2 = true
+      }
+      if(input3 == "3"){ // Getting similarity between non-literal (called source in jena definition) entities (Subjects and objects)
+        makeResult3 = true
+      }
       makeResult0 = true
-    }
-    if(input3 == "1"){ // Getting similarity between predicates
-      makeResult1 = true
-    }
-    if(input3 == "2"){ // Getting similarity between literal entities
-      makeResult2 = true
-    }
-    if(input3 == "3"){ // Getting similarity between non-literal (called source in jena definition) entities (Subjects and objects)
-      makeResult3 = true
-    }
+      makeResult1 = false
+      if (makeResult0) {
+        //##################### Get graph specs ############################
+        //triplesRDD1.cache()
 
-
-    if (makeResult0) {
-      //##################### Get graph specs ############################
-      //triplesRDD1.cache()
-      println("Number of triples in the first KG file " + input1 + "\n") //dbpedia 2457
-      println(triplesRDD1.count().toString)
-
-      println("Number of triples in the second KG " + input2 + "\n") //yago 738
-      println(triplesRDD2.count().toString)
-
-
-      val subject1 = triplesRDD1.map(f => (f.getSubject, 1))
-      val subject1Count = subject1.reduceByKey(_ + _)
-      println("SubjectCount in the first KG \n")
-      subject1Count.take(5).foreach(println(_))
-
-      val predicates1 = triplesRDD1.map(_.getPredicate).distinct
-      println("Number of unique predicates in the first KB is " + predicates1.count()) //333
-      val predicates2 = triplesRDD2.map(_.getPredicate).distinct
-      println("Number of unique predicates in the second KB is " + predicates2.count()) //83
-
-      // Storing the unique predicates in separated files, one for DBpedia and one for YAGO
-      val predicatesKG1 = triplesRDD1.map(f => (f.getPredicate, 1))
-      val predicate1Count = predicatesKG1.reduceByKey(_ + _)
-      //predicates1.take(5).foreach(println(_))
-      //val writer1 = new PrintWriter(new File("src/main/resources/DBpedia_Predicates.nt" ))
-      //predicate1Count.collect().sortBy(f=> f._2  * -1 ).foreach(x=>{writer1.write(x.toString()+ "\n")})
-      //writer1.close()
-
-
-      val predicatesKG2 = triplesRDD2.map(f => (f.getPredicate, 1))
-      val predicate2Count = predicatesKG2.reduceByKey(_ + _)
-      //val writer2 = new PrintWriter(new File("src/main/resources/YAGO_Predicates.nt" ))
-      //predicate2Count.collect().sortBy(f=> f._2  * -1 ).foreach(x=>{writer2.write(x.toString()+ "\n")})
-      //writer2.close()
-      //######################### Creating union for the two RDD triples##############################
       //union of all triples
-      val unifiedTriplesRDD = triplesRDD1.union(triplesRDD2)
 
-      //union all predicates1
-      val unionRelation = triplesRDD1.getPredicates.union(triplesRDD2.getPredicates).distinct()
-      println("Number of unique predicates1 in the two KGs is " + unionRelation.count()) //=413 it should be 333+83=416 which means we have 3 predicates1 is the same
-      println("10 first unique relations  \n")
-      unionRelation.take(10).foreach(println(_))
-
-      val unionRelationIDsssss = (triplesRDD1.getPredicates.union(triplesRDD2.getPredicates)).distinct().zipWithUniqueId
-      //val unionRelationIDs = (triplesRDD1.getPredicates ++ triplesRDD2.getPredicates).distinct()
-      println("Number of unique relationIDssssss in the two KGs is " + unionRelationIDsssss.count()) //413
-      println("10 first unique relationIDssssss  \n")
-      unionRelationIDsssss.take(10).foreach(println(_))
-
-      //merging the middle row:  take unique list of the union of predicates1
-      //IDs converted to string
-      val unionRelationIDs = (triplesRDD1.getPredicates ++ triplesRDD2.getPredicates)
-        .map(line => line.toString()).distinct.zipWithUniqueId
-      //val unionRelationIDs = (triplesRDD1.getPredicates ++ triplesRDD2.getPredicates).distinct()
-      println("Number of unique relationIDs in the two KGs is " + unionRelationIDs.count()) //413
-      println("10 first unique relationIDs  \n")
-      unionRelationIDs.take(10).foreach(println(_))
-
-      //val unionEntities = triplesRDD1.getSubjects.union(triplesRDD2.getSubjects).union(triplesRDD1.getObjects.union(triplesRDD2.getObjects)).distinct()
-      val unionEntities = (triplesRDD1.getSubjects ++ triplesRDD1.getObjects ++ triplesRDD2.getSubjects ++ triplesRDD2.getObjects).distinct().zipWithUniqueId
-      println("Number of unique entities in the two KGs is " + unionEntities.count()) //=355
+           //val unionEntities = triplesRDD1.getSubjects.union(triplesRDD2.getSubjects).union(triplesRDD1.getObjects.union(triplesRDD2.getObjects)).distinct()
+      val unionEntities = (triplesRDD1.getSubjects ++ triplesRDD1.getObjects).distinct().zipWithUniqueId
+      println("Number of unique entities in the KGs is " + unionEntities.count()) //=355
       //println("10 first unique entities  \n")
       //unionEntities.take(10).foreach(println(_))
 
@@ -193,8 +141,7 @@ object Main {
       val unionEntityIDs = (
         triplesRDD1.getSubjects
           ++ triplesRDD1.getObjects
-          ++ triplesRDD2.getSubjects
-          ++ triplesRDD2.getObjects)
+        )
         .map(line => line.toString()).distinct.zipWithUniqueId
       println("Number of unique entity IDs in the two KGs is " + unionEntityIDs.count()) //=225!!
 
