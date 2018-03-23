@@ -47,8 +47,8 @@ object ModuleExecutor {
       //input3 = "datasets/yagofact50k.nt"
       //input2 = "datasets/dbpediaOnlyAppleobjects.nt"
       //input3 = "datasets/yagoonlyAppleobjects.nt"
-      //input2 = "datasets/DBpediaAppleSmalldataset.nt"
-      //input3 = "datasets/YagoAppleSmallDataset.nt"
+      //input2 = "datasets/dbpediaSimple.nt"
+      //input3 = "datasets/yagoSimple.nt"
       //input2 = "datasets/drugbank_dump.nt"
       //input3 = "datasets/dbpedia.drugs.nt"
       input2 = "datasets/person11.nt"
@@ -94,7 +94,7 @@ object ModuleExecutor {
     var DF2 = sparkSession.read.format("com.databricks.spark.csv")
       .option("header", "false")
       .option("inferSchema", "false")
-      .option("delimiter", " ")  // for DBpedia it is \t
+      .option("delimiter", " ")  // for DBpedia some times it is \t
       .option("maxColumns", "4")
       .schema(stringSchema)
       .load(input3)
@@ -102,26 +102,19 @@ object ModuleExecutor {
    DF1 = DF1.drop(DF1.col("dot"))
    DF2 = DF2.drop(DF2.col("dot"))
 
-    val df1 = DF1.toDF("Subject1", "Predicate1", "Object1")
-    val df2 = DF2.toDF("Subject2", "Predicate2", "Object2")
+    val df1 = DF1.toDF("Subject1", "Predicate1", "Object1").persist()
+    val df2 = DF2.toDF("Subject2", "Predicate2", "Object2").persist()
 
     //df1.drop(df1.col("dot"))
     //df2.drop(df2.col("dot"))
 
     //removing duplicates
     df1.createTempView("x")
-    sparkSession.sql("SELECT subject1, predicate1, object1  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject1 ORDER BY subject1 DESC) rn FROM x) predicate1 WHERE rn = 1").collect
+    sparkSession.sql("SELECT subject1, predicate1, object1  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject1 ORDER BY subject1 DESC) rn FROM x) predicate1 WHERE rn = 1")
 
     //removing duplicates
     df2.createOrReplaceTempView("x")
-    sparkSession.sql("SELECT subject2, predicate2, object2  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject2 ORDER BY subject2 DESC) rn FROM x) predicate2 WHERE rn = 1").collect
-
-
-
-
-    // val triplesRDD2 = NTripleReader.load(sparkSession, URI.create(input3))
-    // val df2: DataFrame = triplesRDD2.toDF this does not work so we read it as dataframe from begining
-
+    sparkSession.sql("SELECT subject2, predicate2, object2  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject2 ORDER BY subject2 DESC) rn FROM x) predicate2 WHERE rn = 1")
 
     if (input1 == "PredicatePartitioning") {
       var partitions = new Partitioning(sparkSession.sparkContext)
@@ -171,25 +164,28 @@ object ModuleExecutor {
     }
 
     if (input1 == "EntityMatching") {
-      val matchedEntites = profile {
+      val matchedEntities = profile {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
         val blocking =  new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
-        val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<")).cache()
-        val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")).cache()
+        //val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<")).persist()
+        //val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")).persist()
 
-        var predicatePairs = blocking.getMatchedPredicates(dfTripleWithLiteral1, dfTripleWithLiteral2)
+        var predicatePairs = blocking.getMatchedPredicates(df1, df2)
 
-        val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
-        val literalBasedSubjectMatchs = matching.scheduleLiteralBasedMatching(SubjectsWithLiteral, memory)
+        val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
 
-        val dfTripleWithNonLiteral1 = df1.filter(col("object1").startsWith("<")).cache()
-        val dfTripleWithNonLiteral2 = df2.filter(col("object2").startsWith("<")).cache()
-        predicatePairs = blocking.getMatchedPredicates(dfTripleWithNonLiteral1, dfTripleWithNonLiteral2)
-        matching.matchdEntitiesBasedOnWordNet(dfTripleWithNonLiteral1,dfTripleWithNonLiteral2, literalBasedSubjectMatchs, predicatePairs)
+        val leafSubjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory)
+
+        ///val dfTripleWithNonLiteral1 = df1.filter(col("object1").startsWith("<")).persist()
+        //val dfTripleWithNonLiteral2 = df2.filter(col("object2").startsWith("<")).persist()
+        //predicatePairs = blocking.getMatchedPredicates(df1, df2)
+        //matching.matchNonLiteralSubjectsBasedOnWordNet(dfTripleWithNonLiteral1,dfTripleWithNonLiteral2, literalBasedSubjectMatchs, predicatePairs)
+        blocking.getParentEntities(df1, df2 ,leafSubjectsMatch)
+       // matching.matchParentEntities(df1,df2, leafSubjectsMatch)
       }
-      matchedEntites.show(200, 80)
-      println("number of matched entities pairs: "+ matchedEntites.count.toString)
-      matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedSubjects")
+      matchedEntities.show(200, 80)
+      println("number of matched entities pairs: "+ matchedEntities.count.toString)
+      //matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedSubjects")
     }
 
 

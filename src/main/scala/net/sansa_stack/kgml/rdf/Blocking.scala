@@ -29,7 +29,7 @@ class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
       } catch {
         case e: Exception => null
       }
-    } else {
+    } else { //removing @language ending
       //println("literal:" + S)
       if (S.length == 0) null
       else if (S.startsWith("\"")) {
@@ -42,6 +42,37 @@ class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
       }
     }
   })
+
+  /*
+ * get literal value in objects
+  */
+  val getComparableValue = udf((S: String) => {
+    //println("input:" + S)
+    if (S == null) null
+    else if (S.length > 0 && S.startsWith("<")) { //for URI grab the ending for Wordnet
+      try { //handling special case of Drugbank that puts casRegistryName in URIs, matching between literlas and uri
+          var str = S.split("<")(1).split(">")(0).split("/").last
+          //if (str.endsWith(" .")) str = str.drop(2)
+          if(str.contains("#"))str= str.split("#")(1)
+          //println("non literal:<" + str) //add this to recognize them in SimHandler function
+          "<" + str
+      } catch {
+        case e: Exception => null
+      }
+    } else { //removing @language ending
+      //println("literal:" + S)
+      if (S.length == 0) null
+      else if (S.startsWith("\"")) {
+        val str = S.split("\"")
+        if (str == null || str.isEmpty) S
+        else
+          str(1)
+      } else {
+        S //some file does not have literals in quotation
+      }
+    }
+  })
+
 
   def getURIEnding(str: String): String = {
     if (str.length > 0 && str.startsWith("<")) {
@@ -74,7 +105,7 @@ class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
     //  .withColumn("predicate_ending", getLastPartOfURI(col("object1")))
 
     //val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
-    val dF2 = (df1.select(df1("predicate1")).distinct).crossJoin(df2.select(df2("predicate2")).distinct)
+    val dF2 = df1.select(df1("predicate1")).distinct.crossJoin(df2.select(df2("predicate2")).distinct)
     println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
     //Elapsed time: 90.543716752s
     //Elapsed time: 85.588292884s without coalesce(10)
@@ -184,32 +215,43 @@ in Persons dataset:
     */
   def BlockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): DataFrame = {
 
-
     //filter triples with literals by sparkssql
-    val dF1 = df1.
-      withColumn("Literal1", getLiteralValue(col("object1")))
+ //   val dF1 = df1.
+  //    withColumn("Literal1", getLiteralValue(col("object1")))
 
-    var dF2 = df2.
-      withColumn("Literal2", getLiteralValue(col("object2")))
+  //  var dF2 = df2.
+ //     withColumn("Literal2", getLiteralValue(col("object2")))
 
-    val predicatesPairs = matchedPredicates.toDF("Predicate3", "Predicate4")
-    dF1.createOrReplaceTempView("triple")
-    dF2.createOrReplaceTempView("triple2")
-    val samePredicateSubjectObjects = dF1.
-      join(predicatesPairs, dF1("predicate1") <=> predicatesPairs("Predicate3")).
-      join(dF2, predicatesPairs("Predicate4") <=> dF2("predicate2") && dF2("Literal2").isNotNull && dF1("Literal1").isNotNull)
 
-    samePredicateSubjectObjects.show(70, 50)
+    var predicatesPairs = matchedPredicates.
+    //  where(!col("Predicate1").contains("<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>")).
+      toDF("Predicate3", "Predicate4")
 
-    //select from  "Subject1","Predicate1","Object1","Literal1", "Predicate3","Predicate4","Subject2","Predicate2","Object2","Literal2"
+    df1.createOrReplaceTempView("triple")
+    df2.createOrReplaceTempView("triple2")
+    val samePredicateSubjectObjects = df1.
+      join(predicatesPairs, df1("predicate1") <=> predicatesPairs("Predicate3")).
+      join(df2, predicatesPairs("Predicate4") <=> df2("predicate2"))
+     // && dF2("Literal2").isNotNull && dF1("Literal1").isNotNull
 
-    val typeSubjectWithLiteral = samePredicateSubjectObjects.select("Subject1", "Literal1", "Subject2", "Literal2")
+    //do not compare those that just have one common predicate if we have more, to ignore the case that some subject of different type has only "type" common predicate
+
+
+    //"Subject1","Predicate1","Object1","Literal1", "Predicate3","Predicate4","Subject2","Predicate2","Object2","Literal2"
+
+    val typeSubjectWithLiteral = samePredicateSubjectObjects. withColumn("Literal1", getComparableValue(col("object1"))).
+      withColumn("Literal2", getComparableValue(col("object2"))).where(col("Literal1").isNotNull && col("Literal2").isNotNull)
+      .select("Subject1", "Literal1", "Subject2", "Literal2")
+
+
+    typeSubjectWithLiteral.show(70, 50)
+
     //The other way round will be comparison of subjects. but if the URI format is hashed based then that is useless.
     // By comparing filtered objects we compare literals as well.
     // We cover two cases, when ids are embedded into URI and not literals, as in case of Drug bank data set
     // There is also a chance that entities from both kgs
     // refer to same KG using sameAs link.
-    typeSubjectWithLiteral.cache()
+    typeSubjectWithLiteral.persist()
     typeSubjectWithLiteral
   }
 
@@ -316,5 +358,11 @@ in Persons dataset:
     typedTriples2
   }
 
+    //get parents of a matched entity and pair it with parents of its equivalent in the second data set
+    def getParentEntities(df1: DataFrame, df2 : DataFrame, leafSubjectsMatch : DataFrame): DataFrame ={
+
+      val parentNode = df1.where(col("object1") === leafSubjectsMatch.col("subject1") && !col("subject1") === leafSubjectsMatch.col("subject1"))
+      parentNode
+    }
 
 }

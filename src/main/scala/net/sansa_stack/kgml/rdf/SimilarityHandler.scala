@@ -3,6 +3,8 @@ package net.sansa_stack.kgml.rdf
 import breeze.linalg.max
 import net.didion.jwnl.data.POS
 import net.sansa_stack.kgml.rdf.wordnet.{Synset, WordNet}
+import org.apache.spark.sql.functions.udf
+
 import scala.math._
 
 /**
@@ -276,4 +278,17 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
       this.stringDistanceSimilarity(string1, string2)
     }
   }
+
+  def getSimilarity(s1: String, s2: String) : Double = {
+
+    if(s1.startsWith("<")) { //break down # part
+      jaccardPredicateSimilarityWithWordNet(s1 .split("<")(1), s2.split("<")(1))+ 0.2
+    }  //0.2 the value to keep up with distance similarity}
+    else jaccardLiteralSimilarityWithLevenshtein(s1, s2)
+  }
+
+  val getSimilarityUDF = udf((S: String, S2: String) => {
+    getSimilarity(S, S2)
+  })
+
 }

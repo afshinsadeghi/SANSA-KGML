@@ -3,7 +3,7 @@ package net.sansa_stack.kgml.rdf
 trait EvaluationHelper {
 
 
-  var printReport = false
+  var printReport = true
 
   def profile[R](block: => R): R = {
     val t0 = System.nanoTime()
