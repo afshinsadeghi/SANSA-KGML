@@ -37,7 +37,7 @@ object TestJaccardSimilarity {
 
     //from drugbank dataset and dbpedia predicate comparison
     //1
-    similarityThreshold = 0.5
+    similarityThreshold = 0.7
     similarityHandler.setThreshold(similarityThreshold)
     longPredicate1 = "casNumber"
     longPredicate2 = "casRegistryNumber"
@@ -46,11 +46,18 @@ object TestJaccardSimilarity {
 
     //from drugbank dataset and dbpedia predicate comparison
     //1
-    similarityThreshold = 0.5
+    similarityThreshold = 0.7
     similarityHandler.setThreshold(similarityThreshold)
     longPredicate1 = "120993-53-5"
     longPredicate2 = "cas:120993-53-5"
     sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1, longPredicate2)
+    print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
+
+    similarityThreshold = 0.7
+    similarityHandler.setThreshold(similarityThreshold)
+    longPredicate1 = "120993-53-5"
+    longPredicate2 = "cas:120993-53-5"
+    sim = similarityHandler.jaccardLiteralSimilarityWithLevenshtein(longPredicate1, longPredicate2)
     print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
 
   }

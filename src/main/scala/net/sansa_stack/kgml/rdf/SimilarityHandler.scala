@@ -10,23 +10,25 @@ import scala.math._
 /**
   * Created by afshin on 26.10.17.
   */
-class SimilarityHandler(initialThreshold: Double) extends Serializable{
+class SimilarityHandler(initialThreshold: Double) extends Serializable {
 
-  private var threshold = initialThreshold
+  private var stringSimThreshold = initialThreshold
+  private var wordNetThreshold = initialThreshold - 0.2
+
   var maxLch = 3.6888794541139363
   //var maxRes = 6.7959465490685735
   var maxRes = 8.993171126404793
   var maxJcn = 1.2876699500047589E7
   //var maxLesk = 7
-  var maxLesk = 10
+  var maxLesk = 19
 
 
-  val wn =  new WordNet()
+  val wn = new WordNet()
 
 
   def checkLowerCaseStringEquality(string1: String, string2: String): Boolean = {
 
-    if(string1.length == 0 || string2.length == 0)return false
+    if (string1.length == 0 || string2.length == 0) return false
     string1.toLowerCase == string2.toLowerCase
   }
 
@@ -35,9 +37,9 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
     if (this.checkLowerCaseStringEquality(string1, string2)) { // This is for phrases that has exactly same sequence of words
       //println(string1 + " "+  string2 + "lower case equal")
       similarity = 1.0
-    } else if(string1.length < 4 && string2.length < 4) {
+    } else if (string1.length < 4 && string2.length < 4) {
       similarity = 0.0
-    } else if(string1.length < 3 || string2.length < 3) {
+    } else if (string1.length < 3 || string2.length < 3) {
       similarity = 0.0
     } else {
 
@@ -53,7 +55,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
     val string1l = this.removeSpecialChars(string1) // literals in difference KGs may be in double quotes etc.
     val string2l = this.removeSpecialChars(string2)
 
-   val similarity = this.getPredicateSimilarity(string1l, string2l)
+    val similarity = this.getPredicateSimilarity(string1l, string2l)
     similarity
 
   }
@@ -80,13 +82,13 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
       val nounLeskSimilarity = wn.leskSimilarity(string1AsNoun, string2AsNoun) / maxLesk
       nounMeanSim = (nounPathSimilarity + nounLchSimilarity + nounWupSimilarity + nounResSimilarity + nounJcnSimilarity
         + nounLinSimilarity + nounLeskSimilarity) / 7
-//      println("nounPathSimilarity = "+nounPathSimilarity)
-//      println("nounLchSimilarity = "+nounLchSimilarity)
-//      println("nounWupSimilarity = " + nounWupSimilarity)
-//      println("nounResSimilarity = " + nounResSimilarity)
-//      println("nounJcnSimilarity = " + nounJcnSimilarity)
-//      println("nounLinSimilarity = " + nounLinSimilarity)
-//      println("nounLeskSimilarity = " + nounLeskSimilarity)
+      //      println("nounPathSimilarity = "+nounPathSimilarity)
+      //      println("nounLchSimilarity = "+nounLchSimilarity)
+      //      println("nounWupSimilarity = " + nounWupSimilarity)
+      //      println("nounResSimilarity = " + nounResSimilarity)
+      //      println("nounJcnSimilarity = " + nounJcnSimilarity)
+      //      println("nounLinSimilarity = " + nounLinSimilarity)
+      //      println("nounLeskSimilarity = " + nounLeskSimilarity)
 
     }
     catch {
@@ -98,7 +100,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
 
   def getMeanWordNetVerbSimilarity(string1: String, string2: String): Double = {
     var verbMeanSim = 0.0
-    try{
+    try {
       val string1AsVerb = wn.synset(string1, POS.VERB, 1)
       val string2AsVerb = wn.synset(string2, POS.VERB, 1)
       //7 similarity measures
@@ -113,7 +115,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
       verbMeanSim = (verbPathSimilarity + verbLchSimilarity + verbWupSimilarity + verbResSimilarity + verbJcnSimilarity
         + verbLinSimilarity + verbLeskSimilarity) / 7
 
-    }catch {
+    } catch {
       case e: Exception => verbMeanSim = 0.0
     }
     (verbMeanSim * 100).round / 100.toDouble
@@ -121,7 +123,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
 
   def arePredicatesEqual(string1: String, string2: String): Boolean = {
     var isEqual = false
-    if (threshold < this.jaccardPredicateSimilarityWithWordNet(string1, string2)) {
+    if (wordNetThreshold < this.jaccardPredicateSimilarityWithWordNet(string1, string2)) {
       isEqual = true
     }
     isEqual
@@ -130,24 +132,30 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
 
   def areLiteralsEqual(string1: String, string2: String): Boolean = {
     var isEqual = false
-    if (threshold < this.jaccardLiteralSimilarityWithLevenshtein(string1, string2)) {
+    if (stringSimThreshold < this.jaccardLiteralSimilarityWithLevenshtein(string1, string2)) {
       isEqual = true
     }
     isEqual
   }
 
   def setThreshold(newThreshold: Double): Unit = {
-    threshold = newThreshold
+    stringSimThreshold = newThreshold
+    wordNetThreshold = newThreshold - 0.2
   }
 
-  def getThreshold: Double = threshold
+  def setWordNetThreshold(newThreshold: Double): Unit = {
+    stringSimThreshold = newThreshold + 0.2
+    wordNetThreshold = newThreshold
+  }
+
+  def getThreshold: Double = stringSimThreshold
 
   def removeSpecialChars(string1: String): String = {
     val string2 = string1.replaceAll("""([\p{Punct}&&[^.]]|\b\p{IsLetter}{1,2}\b)\s*""", " ").trim
-  string2
+    string2
   }
 
-  def jaccardSimilarity(intersectionCount : Double, num1 : Double, num2 : Double) : Double = {
+  def jaccardSimilarity(intersectionCount: Double, num1: Double, num2: Double): Double = {
     val union = num1 + num2 - intersectionCount
     intersectionCount / union
   }
@@ -164,62 +172,68 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
   }
 
 
-  def jaccardPredicateSimilarityWithWordNet( string1 : String, string2 : String ) : Double = {
+  def jaccardPredicateSimilarityWithWordNet(string1: String, string2: String): Double = {
 
-    if(this.checkLowerCaseStringEquality(string1, string2)) return 1.0
+    if (this.checkLowerCaseStringEquality(string1, string2)) return 1.0
 
-    var array1 = this.splitCamelCase(string1)
-    var array2 = this.splitCamelCase(string2)
+    val string1l = this.removeSpecialChars(string1) // literals in difference KGs may be in double quotes etc.
+    val string2l = this.removeSpecialChars(string2)
+    var array1 = this.splitCamelCase(string1l)
+    var array2 = this.splitCamelCase(string2l)
     val maxNumOfWordsInStringToTraverse = 5 //the text is cut to make the similarity check faster
-    val maxTraverse1 = Math.min(maxNumOfWordsInStringToTraverse, array1.length )
-    val maxTraverse2 = Math.min(maxNumOfWordsInStringToTraverse, array2.length )
+    val maxTraverse1 = Math.min(maxNumOfWordsInStringToTraverse, array1.length)
+    val maxTraverse2 = Math.min(maxNumOfWordsInStringToTraverse, array2.length)
 
-    if(maxTraverse1 > 1 || maxTraverse2 > 1){
+    if (maxTraverse1 > 1 || maxTraverse2 > 1) {
 
-      val divider = Math.min(maxTraverse1,maxTraverse2)
+      val divider = Math.min(maxTraverse1, maxTraverse2)
       array1 = array1.take(maxTraverse1)
       array2 = array2.take(maxTraverse2)
       var intersectionCount = 0.0
       var localSim = 0.0
-      for (x <- array1 ; y <- array2){
+      for (x <- array1; y <- array2) {
         localSim = this.getPredicateSimilarity(x, y)
-        if (threshold <= localSim ) { intersectionCount =  intersectionCount + 1}
+        if (wordNetThreshold <= localSim) {
+          intersectionCount = intersectionCount + 1
+        }
       }
       //println(array1.toList, array2.toList)
-      this.jaccardSimilarity(intersectionCount , array1.length, array2.length)
-    }else{
+      this.jaccardSimilarity(intersectionCount, array1.length, array2.length)
+    } else {
       this.getPredicateSimilarity(string1, string2)
     }
   }
 
-  def jaccardLiteralSimilarityWithWordNet( string1 : String, string2 : String ) : Double = {
+  def jaccardLiteralSimilarityWithWordNet(string1: String, string2: String): Double = {
 
-    if(this.checkLowerCaseStringEquality(string1, string2)) return 1.0
+    if (this.checkLowerCaseStringEquality(string1, string2)) return 1.0
 
     val string1l = this.removeSpecialChars(string1) // literals in difference KGs may be in double quotes etc.
-    val string2l = this.removeSpecialChars(string2)
-    if(string1l.length == 0 || string2l.length == 0) return 0.0
+    val string2l = this.removeSpecialChars(string2) //for WordNet numbers also are meaningless
+    if (string1l.length == 0 || string2l.length == 0) return 0.0
 
     var array1 = string1l.split(" ")
     var array2 = string2l.split(" ")
     val maxNumOfWordsInStringToTraverse = 5 //the text is cut to make the similarity check faster
-    val maxTraverse1 = Math.min(maxNumOfWordsInStringToTraverse, array1.length )
-    val maxTraverse2 = Math.min(maxNumOfWordsInStringToTraverse, array2.length )
+    val maxTraverse1 = Math.min(maxNumOfWordsInStringToTraverse, array1.length)
+    val maxTraverse2 = Math.min(maxNumOfWordsInStringToTraverse, array2.length)
 
-    if(maxTraverse1 > 1 && maxTraverse2 > 1){
+    if (maxTraverse1 > 1 && maxTraverse2 > 1) {
 
-      val divider = Math.min(maxTraverse1,maxTraverse2)
+      val divider = Math.min(maxTraverse1, maxTraverse2)
       array1 = array1.take(maxTraverse1)
       array2 = array2.take(maxTraverse2)
       var intersectionCount = 0.0
       var localSim = 0.0
-      for (x <- array1 ; y <- array2){
+      for (x <- array1; y <- array2) {
         localSim = this.getPredicateSimilarity(x, y)
-        if (threshold <= localSim ) { intersectionCount =  intersectionCount + 1}
+        if (wordNetThreshold <= localSim) {
+          intersectionCount = intersectionCount + 1
+        }
       }
       //println(array1.toList, array2.toList)
-      this.jaccardSimilarity(intersectionCount , array1.length, array2.length)
-    }else{
+      this.jaccardSimilarity(intersectionCount, array1.length, array2.length)
+    } else {
       this.getPredicateSimilarity(string1, string2)
     }
   }
@@ -228,16 +242,17 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
 
     string simlarity based on common string length
    */
-  def stringDistanceSimilarity(s1: String, s2: String): Double ={
-    2*(min(s1.length , s2.length)- levenshteinDistance(s1,s2)) / (s1.length + s2.length)
+  def stringDistanceSimilarity(s1: String, s2: String): Double = {
+    2 * (min(s1.length, s2.length) - levenshteinDistance(s1, s2)) / (s1.length + s2.length)
   }
 
 
-/*
-  levenshtein string similarity measure
- */
-  def levenshteinDistance(s1: String, s2: String) : Double = {
+  /*
+    levenshtein string similarity measure
+   */
+  def levenshteinDistance(s1: String, s2: String): Double = {
     def minimum(i1: Int, i2: Int, i3: Int) = min(min(i1, i2), i3)
+
     val dist = Array.tabulate(s2.length + 1, s1.length + 1) { (j, i) => if (j == 0) i else if (i == 0) j else 0 }
     for (j <- 1 to s2.length; i <- 1 to s1.length)
       dist(j)(i) = if (s2(j - 1) == s1(i - 1)) dist(j - 1)(i - 1)
@@ -245,7 +260,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
     dist(s2.length)(s1.length)
   }
 
-  def jaccardLiteralSimilarityWithLevenshtein( string1 : String, string2 : String ) : Double = {
+  def jaccardLiteralSimilarityWithLevenshtein(string1: String, string2: String): Double = {
 
     if (this.checkLowerCaseStringEquality(string1, string2)) return 1.0
 
@@ -268,7 +283,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
       var localSim = 0.0
       for (x <- array1; y <- array2) {
         localSim = this.stringDistanceSimilarity(x, y)
-        if (threshold <= localSim) {
+        if (stringSimThreshold <= localSim) {
           intersectionCount = intersectionCount + 1
         }
       }
@@ -279,11 +294,15 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable{
     }
   }
 
-  def getSimilarity(s1: String, s2: String) : Double = {
+  def getSimilarity(s1: String, s2: String): Double = {
 
-    if(s1.startsWith("<")) { //break down # part
-      jaccardPredicateSimilarityWithWordNet(s1 .split("<")(1), s2.split("<")(1))+ 0.2
-    }  //0.2 the value to keep up with distance similarity}
+    if (s1.startsWith("<")) { //break down # part
+      var sim = jaccardPredicateSimilarityWithWordNet(s1.split("<")(1), s2.split("<")(1))
+      if (sim > wordNetThreshold) sim = stringSimThreshold
+      //In WordNet mean similarity measure greater values than 0.5 are similar but in distance similarity, higher than 0.7 is similar
+      //WordNet alone must not be accepted as similar, so the aggregate threshold should it more than threshold(0.7).
+      sim
+    }
     else jaccardLiteralSimilarityWithLevenshtein(s1, s2)
   }
 

@@ -102,19 +102,16 @@ object ModuleExecutor {
    DF1 = DF1.drop(DF1.col("dot"))
    DF2 = DF2.drop(DF2.col("dot"))
 
-    val df1 = DF1.toDF("Subject1", "Predicate1", "Object1").persist()
-    val df2 = DF2.toDF("Subject2", "Predicate2", "Object2").persist()
-
-    //df1.drop(df1.col("dot"))
-    //df2.drop(df2.col("dot"))
+    val df1 = DF1.toDF("Subject1", "Predicate1", "Object1")
+    val df2 = DF2.toDF("Subject2", "Predicate2", "Object2")
 
     //removing duplicates
     df1.createTempView("x")
-    sparkSession.sql("SELECT subject1, predicate1, object1  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject1 ORDER BY subject1 DESC) rn FROM x) predicate1 WHERE rn = 1")
+    sparkSession.sql("SELECT subject1, predicate1, object1  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject1 ORDER BY subject1 DESC) rn FROM x) predicate1 WHERE rn = 1").persist()
 
     //removing duplicates
     df2.createOrReplaceTempView("x")
-    sparkSession.sql("SELECT subject2, predicate2, object2  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject2 ORDER BY subject2 DESC) rn FROM x) predicate2 WHERE rn = 1")
+    sparkSession.sql("SELECT subject2, predicate2, object2  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject2 ORDER BY subject2 DESC) rn FROM x) predicate2 WHERE rn = 1").persist()
 
     if (input1 == "PredicatePartitioning") {
       var partitions = new Partitioning(sparkSession.sparkContext)
@@ -180,6 +177,7 @@ object ModuleExecutor {
         //val dfTripleWithNonLiteral2 = df2.filter(col("object2").startsWith("<")).persist()
         //predicatePairs = blocking.getMatchedPredicates(df1, df2)
         //matching.matchNonLiteralSubjectsBasedOnWordNet(dfTripleWithNonLiteral1,dfTripleWithNonLiteral2, literalBasedSubjectMatchs, predicatePairs)
+        leafSubjectsMatch.show(200, 80)
         blocking.getParentEntities(df1, df2 ,leafSubjectsMatch)
        // matching.matchParentEntities(df1,df2, leafSubjectsMatch)
       }

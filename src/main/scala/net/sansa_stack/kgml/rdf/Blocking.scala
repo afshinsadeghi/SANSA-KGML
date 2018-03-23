@@ -51,11 +51,11 @@ class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
     if (S == null) null
     else if (S.length > 0 && S.startsWith("<")) { //for URI grab the ending for Wordnet
       try { //handling special case of Drugbank that puts casRegistryName in URIs, matching between literlas and uri
-          var str = S.split("<")(1).split(">")(0).split("/").last
-          //if (str.endsWith(" .")) str = str.drop(2)
-          if(str.contains("#"))str= str.split("#")(1)
-          //println("non literal:<" + str) //add this to recognize them in SimHandler function
-          "<" + str
+        var str = S.split("<")(1).split(">")(0).split("/").last
+        //if (str.endsWith(" .")) str = str.drop(2)
+        if (str.contains("#")) str = str.split("#")(1)
+        //println("non literal:<" + str) //add this to recognize them in SimHandler function
+        "<" + str
       } catch {
         case e: Exception => null
       }
@@ -216,15 +216,15 @@ in Persons dataset:
   def BlockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): DataFrame = {
 
     //filter triples with literals by sparkssql
- //   val dF1 = df1.
-  //    withColumn("Literal1", getLiteralValue(col("object1")))
+    //   val dF1 = df1.
+    //    withColumn("Literal1", getLiteralValue(col("object1")))
 
-  //  var dF2 = df2.
- //     withColumn("Literal2", getLiteralValue(col("object2")))
+    //  var dF2 = df2.
+    //     withColumn("Literal2", getLiteralValue(col("object2")))
 
 
     var predicatesPairs = matchedPredicates.
-    //  where(!col("Predicate1").contains("<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>")).
+      //  where(!col("Predicate1").contains("<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>")).
       toDF("Predicate3", "Predicate4")
 
     df1.createOrReplaceTempView("triple")
@@ -232,14 +232,14 @@ in Persons dataset:
     val samePredicateSubjectObjects = df1.
       join(predicatesPairs, df1("predicate1") <=> predicatesPairs("Predicate3")).
       join(df2, predicatesPairs("Predicate4") <=> df2("predicate2"))
-     // && dF2("Literal2").isNotNull && dF1("Literal1").isNotNull
+    // && dF2("Literal2").isNotNull && dF1("Literal1").isNotNull
 
     //do not compare those that just have one common predicate if we have more, to ignore the case that some subject of different type has only "type" common predicate
 
 
     //"Subject1","Predicate1","Object1","Literal1", "Predicate3","Predicate4","Subject2","Predicate2","Object2","Literal2"
 
-    val typeSubjectWithLiteral = samePredicateSubjectObjects. withColumn("Literal1", getComparableValue(col("object1"))).
+    val typeSubjectWithLiteral = samePredicateSubjectObjects.withColumn("Literal1", getComparableValue(col("object1"))).
       withColumn("Literal2", getComparableValue(col("object2"))).where(col("Literal1").isNotNull && col("Literal2").isNotNull)
       .select("Subject1", "Literal1", "Subject2", "Literal2")
 
@@ -325,10 +325,10 @@ in Persons dataset:
     val samePredicate = df1.
       join(predicatesPairs, df1("predicate1") <=> predicatesPairs("Predicate3")).join(df2, predicatesPairs("Predicate4") <=> df2("predicate2"))
 
-      samePredicate.createOrReplaceTempView("sameTypes")
-      println("ranking of predicates")
-      val sqlText2 = "SELECT  predicate1, predicate2, COUNT(*) FROM sameTypes group by predicate1, predicate2 ORDER BY COUNT(*) DESC"
-      val typedTriples2 = sparkSession.sql(sqlText2)
+    samePredicate.createOrReplaceTempView("sameTypes")
+    println("ranking of predicates")
+    val sqlText2 = "SELECT  predicate1, predicate2, COUNT(*) FROM sameTypes group by predicate1, predicate2 ORDER BY COUNT(*) DESC"
+    val typedTriples2 = sparkSession.sql(sqlText2)
     if (printReport) {
       typedTriples2.show(15, 80)
     }
@@ -358,11 +358,17 @@ in Persons dataset:
     typedTriples2
   }
 
-    //get parents of a matched entity and pair it with parents of its equivalent in the second data set
-    def getParentEntities(df1: DataFrame, df2 : DataFrame, leafSubjectsMatch : DataFrame): DataFrame ={
+  //get parents of a matched entity and pair it with parents of its equivalent in the second data set
+  def getParentEntities(df1: DataFrame, df2: DataFrame, leafSubjectsMatch: DataFrame): DataFrame = {
 
-      val parentNode = df1.where(col("object1") === leafSubjectsMatch.col("subject1") && !col("subject1") === leafSubjectsMatch.col("subject1"))
-      parentNode
-    }
+    //get parent nodes, removing from them those subjects the matched entities from df1 and df2 subjects
+    val parentNode1 = df1.where(col("object1") === leafSubjectsMatch.col("subject1") && !(col("subject1") === leafSubjectsMatch.col("subject1")))
+    val parentNode2 = df2.where(col("object2") === leafSubjectsMatch.col("subject2") && !(col("subject2") === leafSubjectsMatch.col("subject2")))
+    //parentNode1.join(parentNode2, parentNode1.)
+    //getting pair of parents of matched entities
+    parentNode1.join(parentNode2,
+      parentNode1("object1") === leafSubjectsMatch("subject1") &&
+        parentNode2("object1") === leafSubjectsMatch("subject2")  ) //instead of cross join compare those who had same child
+  }
 
 }
