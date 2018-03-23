@@ -178,10 +178,15 @@ object ModuleExecutor {
         //predicatePairs = blocking.getMatchedPredicates(df1, df2)
         //matching.matchNonLiteralSubjectsBasedOnWordNet(dfTripleWithNonLiteral1,dfTripleWithNonLiteral2, literalBasedSubjectMatchs, predicatePairs)
         leafSubjectsMatch.show(200, 80)
-        blocking.getParentEntities(df1, df2 ,leafSubjectsMatch)
+        val parentEntities = blocking.getParentEntities(df1, df2 ,leafSubjectsMatch)
+        if(parentEntities.count() > 0) {
+        //  var leafSubjectsMatch2 = matching.scheduleMatching(parentEntities, memory)
+        //  leafSubjectsMatch = leafSubjectsMatch.union(leafSubjectsMatch2)
+        }
+        leafSubjectsMatch
        // matching.matchParentEntities(df1,df2, leafSubjectsMatch)
       }
-      matchedEntities.show(200, 80)
+      //matchedEntities.show(200, 80)
       println("number of matched entities pairs: "+ matchedEntities.count.toString)
       //matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedSubjects")
     }

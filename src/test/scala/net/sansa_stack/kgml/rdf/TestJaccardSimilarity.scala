@@ -60,6 +60,20 @@ object TestJaccardSimilarity {
     sim = similarityHandler.jaccardLiteralSimilarityWithLevenshtein(longPredicate1, longPredicate2)
     print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
 
+    longPredicate1 = "120993-53-5"
+    longPredicate2 = "cas:120993-53-5"
+    sim = similarityHandler.jaccardLiteralSimilarityWithLevenshtein(longPredicate1, longPredicate2)
+    print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
+
+    longPredicate1 = "<Person"
+    longPredicate2 = "<Person"
+    sim = similarityHandler.getSimilarity(longPredicate1, longPredicate2)
+    print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
+
+    longPredicate1 = "name"
+    longPredicate2 = "phone-numer"
+    sim = similarityHandler.jaccardPredicateSimilarityWithWordNet(longPredicate1, longPredicate2)
+    print("similarity of " + longPredicate1 + " and " + longPredicate2 + " is " + sim + "\n")
   }
 
 

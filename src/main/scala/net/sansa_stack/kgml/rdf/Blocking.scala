@@ -13,6 +13,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
 
+  val simThreshold = 0.7
   /*
   * get literal value in objects
    */
@@ -123,7 +124,9 @@ class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
     //println(predicates.collect().take(20))
 
 
-    val wordNetSim = new SimilarityHandler(0.5)
+    val wordNetSim = new SimilarityHandler(simThreshold)
+      wordNetSim.setWordNetThreshold(0.51)
+    println(wordNetSim.getWordNetThreshold)
     val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
       wordNetSim.arePredicatesEqual(getURIEnding(x.getString(0)),
         getURIEnding(x.getString(1)))))
@@ -243,8 +246,7 @@ in Persons dataset:
       withColumn("Literal2", getComparableValue(col("object2"))).where(col("Literal1").isNotNull && col("Literal2").isNotNull)
       .select("Subject1", "Literal1", "Subject2", "Literal2")
 
-
-    typeSubjectWithLiteral.show(70, 50)
+   if(printReport) typeSubjectWithLiteral.show(15, 50)
 
     //The other way round will be comparison of subjects. but if the URI format is hashed based then that is useless.
     // By comparing filtered objects we compare literals as well.
@@ -304,7 +306,7 @@ in Persons dataset:
     val dF2 = (df1.select(df1("predicate1")).distinct).crossJoin(df2.select(df2("predicate2")).distinct)
 
 
-    val wordNetSim = new SimilarityHandler(0.5)
+    val wordNetSim = new SimilarityHandler(simThreshold)
     val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
       wordNetSim.arePredicatesEqual(getURIEnding(x.getString(0)),
         getURIEnding(x.getString(1)))))

@@ -13,7 +13,7 @@ import scala.math._
 class SimilarityHandler(initialThreshold: Double) extends Serializable {
 
   private var stringSimThreshold = initialThreshold
-  private var wordNetThreshold = initialThreshold - 0.2
+  private var wordNetThreshold = initialThreshold - 0.20
 
   var maxLch = 3.6888794541139363
   //var maxRes = 6.7959465490685735
@@ -124,6 +124,8 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
   def arePredicatesEqual(string1: String, string2: String): Boolean = {
     var isEqual = false
     if (wordNetThreshold < this.jaccardPredicateSimilarityWithWordNet(string1, string2)) {
+      //println(wordNetThreshold)
+      //println(this.jaccardPredicateSimilarityWithWordNet(string1, string2))
       isEqual = true
     }
     isEqual
@@ -149,6 +151,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
   }
 
   def getThreshold: Double = stringSimThreshold
+  def getWordNetThreshold: Double = wordNetThreshold
 
   def removeSpecialChars(string1: String): String = {
     val string2 = string1.replaceAll("""([\p{Punct}&&[^.]]|\b\p{IsLetter}{1,2}\b)\s*""", " ").trim
@@ -295,10 +298,14 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
   }
 
   def getSimilarity(s1: String, s2: String): Double = {
-
+    var sim = 0.0
     if (s1.startsWith("<")) { //break down # part
-      var sim = jaccardPredicateSimilarityWithWordNet(s1.split("<")(1), s2.split("<")(1))
-      if (sim > wordNetThreshold) sim = stringSimThreshold
+      var s11 = s1.split("<")(1)
+      var s12 = s2.split("<")(1)
+      if(!s11.isEmpty && !s12.isEmpty){
+         sim = jaccardPredicateSimilarityWithWordNet(s11, s12)
+        if (sim > wordNetThreshold) sim = stringSimThreshold
+      }else sim = 0.0
       //In WordNet mean similarity measure greater values than 0.5 are similar but in distance similarity, higher than 0.7 is similar
       //WordNet alone must not be accepted as similar, so the aggregate threshold should it more than threshold(0.7).
       sim

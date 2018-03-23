@@ -140,7 +140,9 @@ only showing top 15 rows
     println("ranking of common triple counts based on their count.")
     val sqlText3 = "SELECT  count CommonPredicates , COUNT(*) TriplesWithThisCommonPredicateNumber,  (Count * Count(*)) comparisonsRequired   FROM groupedSubjects group by COUNT ORDER BY COUNT(*) DESC"
     val rankedCounts = sparkSession.sql(sqlText3)
-    rankedCounts.show(15, 80)
+    if (printReport) {
+      rankedCounts.show(15, 80)
+    }
     rankedCounts
     /*
     For persons dataSet the result is
@@ -294,31 +296,33 @@ only showing top 15 rows
   def matchAClusterOptimized(requiredRepetition: Int, typeSubjectWithLiteral: DataFrame,
                              cluster: DataFrame): Unit = {
 
+    val subjectWithLiteral = typeSubjectWithLiteral.toDF("Subject3", "Literal1", "Subject4", "Literal2")
     println("requiredSplit:" + requiredRepetition)
     //var localUnion = matchedEmptyDF //just to inherit type of Data Frame
     val clustersSeq = this.splitSampleMux(cluster.rdd, requiredRepetition, MEMORY_ONLY, 0)
     val schema = new StructType()
-      .add(StructField("Subject4", StringType, true))
-      .add(StructField("Subject5", StringType, true))
+      .add(StructField("Subject1", StringType, true))
+      .add(StructField("Subject2", StringType, true))
       .add(StructField("commonPredicateCount", LongType, true))
     var counter = 1
     clustersSeq.foreach(a => {
       println("In parallel cluster number " + counter + " from " + requiredRepetition)
-      val b = sparkSession.createDataFrame(a, schema)
+      val b = sparkSession.createDataFrame(a, schema).except(matchedUnion)
+      //.where(col("Subject4") =!= matchedUnion.col("Subject1") || col("Subject5") =!= matchedUnion.col("Subject2"))
       val firstMatchingLevel =
-      if (matchedUnion.count() == 0){
-         typeSubjectWithLiteral.join(
-          b,
-          typeSubjectWithLiteral("subject1") === b("Subject4") &&
-            typeSubjectWithLiteral("subject2") === b("Subject5")
-          , "inner").select("Subject1", "Literal1", "Subject2", "Literal2")
-    }else{
-        typeSubjectWithLiteral.join(
-          b.where(!(col("Subject4") === matchedUnion.col("Subject1") || col("Subject5") === matchedUnion.col("Subject2"))),
-          typeSubjectWithLiteral("subject1") === b("Subject4") &&
-            typeSubjectWithLiteral("subject2") === b("Subject5")
-          , "inner").select("Subject1", "Literal1", "Subject2", "Literal2")
-      }
+     //   if (matchedUnion.rdd.isEmpty()) {
+          subjectWithLiteral.join(
+            b,
+            subjectWithLiteral("subject3") === b("Subject1") &&
+              subjectWithLiteral("subject4") === b("Subject2")
+            , "inner").select("Subject1", "Literal1", "Subject2", "Literal2")
+     //   } else {
+     //     subjectWithLiteral.join(
+     //       b,
+     //       subjectWithLiteral("subject3") === b("Subject1") &&
+     //         subjectWithLiteral("subject4") === b("Subject2")
+     //       , "inner").select("Subject1", "Literal1", "Subject2", "Literal2")
+    //    }
 
       //  && here Must filter a portion of slotSize for each count and put that in a memory block
       if (printReport) {
@@ -382,23 +386,20 @@ only showing top 15 rows
     * @return
     */
   def getMatchedEntityPairsBasedOnLiteralSim(firstMatchingLevel: DataFrame): DataFrame = {
-
-    //val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(2),
-    //simHandler.getSimilarity(x.getString(1), x.getString(3))))
-
-
-    val subjectsComparedByLiteral = firstMatchingLevel
-      .withColumn("strSimilarity", simHandler.getSimilarityUDF(col("Literal1"), col("Literal2"))).cache()
-
+    // val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(2),
+    // simHandler.getSimilarity(x.getString(1), x.getString(3))))
+    val subjectsComparedByLiteral = firstMatchingLevel.where(col("Literal1").isNotNull && col("Literal2").isNotNull)
+      .withColumn("strSimilarity", simHandler.getSimilarityUDF(col("Literal1"), col("Literal2")))
     // val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
-    // import sparkSession.sqlContext.implicits._
-    // val subjectsComparedByLiteral = rdd1.toDF("Subject1", "Subject2", "strSimilarity")
+    //  import sparkSession.sqlContext.implicits._
+    //   val subjectsComparedByLiteral = rdd1.toDF("Subject1", "Subject2", "strSimilarity")
     if (printReport) {
+      println("number of matched entities:" + subjectsComparedByLiteral.count())
       subjectsComparedByLiteral.show(40)
     }
     subjectsComparedByLiteral.createOrReplaceTempView("matched")
     val sqlText1 = "SELECT Subject1, Subject2, strSimilarity FROM matched WHERE strSimilarity > " + similarityThreshold.toString
-    val matchedSubjects = sparkSession.sql(sqlText1)
+    val matchedSubjects = sparkSession.sql(sqlText1).persist()
     if (printReport) {
       matchedSubjects.show(50, 80)
       println("the number of matched pair of subjects that are paired by matched predicate and matched literals")
