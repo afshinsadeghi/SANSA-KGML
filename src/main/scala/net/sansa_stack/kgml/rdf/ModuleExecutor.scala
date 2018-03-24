@@ -47,12 +47,12 @@ object ModuleExecutor {
       //input3 = "datasets/yagofact50k.nt"
       //input2 = "datasets/dbpediaOnlyAppleobjects.nt"
       //input3 = "datasets/yagoonlyAppleobjects.nt"
-      //input2 = "datasets/dbpediaSimple.nt"
-      //input3 = "datasets/yagoSimple.nt"
+      input2 = "datasets/dbpediaSimple.nt"
+      input3 = "datasets/yagoSimple.nt"
       //input2 = "datasets/drugbank_dump.nt"
       //input3 = "datasets/dbpedia.drugs.nt"
-      input2 = "datasets/person11.nt"
-      input3 = "datasets/person12.nt"
+      //input2 = "datasets/person11.nt"
+      //input3 = "datasets/person12.nt"
     }
     println(input1)
     println(input2)
@@ -86,6 +86,7 @@ object ModuleExecutor {
       .option("header", "false")
       .option("inferSchema", "false")
       .option("delimiter", " ")
+      .option("comment", "#")
       .option("maxColumns", "4")
       .schema(stringSchema)
       .load(input2)
@@ -94,6 +95,7 @@ object ModuleExecutor {
     var DF2 = sparkSession.read.format("com.databricks.spark.csv")
       .option("header", "false")
       .option("inferSchema", "false")
+      .option("comment", "#")
       .option("delimiter", " ")  // for DBpedia some times it is \t
       .option("maxColumns", "4")
       .schema(stringSchema)
@@ -161,33 +163,49 @@ object ModuleExecutor {
     }
 
     if (input1 == "EntityMatching") {
-      val matchedEntities = profile {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
-        val blocking =  new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
-        //val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<")).persist()
+        val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
+      val leafSubjectsMatch = profile {
+       // val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<")).persist()
         //val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")).persist()
 
         var predicatePairs = blocking.getMatchedPredicates(df1, df2)
 
         val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
-
-        val leafSubjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory)
-
-        ///val dfTripleWithNonLiteral1 = df1.filter(col("object1").startsWith("<")).persist()
+        //first level match using leaf literals
+        val leafSubjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory).persist()
+        leafSubjectsMatch
+      }
+        leafSubjectsMatch.show(20,80)
+        //todo: repeat this with full df1 and df2
+        //val dfTripleWithNonLiteral1 = df1.filter(col("object1").startsWith("<")).persist()
         //val dfTripleWithNonLiteral2 = df2.filter(col("object2").startsWith("<")).persist()
-        //predicatePairs = blocking.getMatchedPredicates(df1, df2)
+        val allPredicatePairs = blocking.getMatchedPredicates(df1, df2)
+
+        //var subjects = blocking.addSubjectsLiteral(df1, df2)
+        //filter those who matched by literals
+        var parentNodes = blocking.getParentEntities(df1, df2 ,leafSubjectsMatch)
+        var parentSubjectsWithLiteral = blocking.getSubjectsWithLiteral(parentNodes)
+        parentSubjectsWithLiteral.show(20,80)
+        var subjectsMatch = leafSubjectsMatch
+//        while (!parentSubjects.rdd.isEmpty()) {
+          println("In loop to match parents, parents count= " + parentNodes.count())
+         var parentSubjectsMatch = matching.scheduleParentMatching( parentSubjectsWithLiteral, subjectsMatch)
+
+          subjectsMatch = subjectsMatch.union(parentSubjectsMatch)
+          parentNodes = blocking.getParentEntities(df1, df2 , subjectsMatch)
+          parentSubjectsWithLiteral = blocking.getSubjectsWithLiteral(parentNodes)
+//        }
         //matching.matchNonLiteralSubjectsBasedOnWordNet(dfTripleWithNonLiteral1,dfTripleWithNonLiteral2, literalBasedSubjectMatchs, predicatePairs)
-        leafSubjectsMatch.show(200, 80)
-        val parentEntities = blocking.getParentEntities(df1, df2 ,leafSubjectsMatch)
-        if(parentEntities.count() > 0) {
+        //val parentEntities = blocking.getParentEntities(df1, df2 ,leafSubjectsMatch)
+       // if(parentSubjects.count() > 0) {
         //  var leafSubjectsMatch2 = matching.scheduleMatching(parentEntities, memory)
         //  leafSubjectsMatch = leafSubjectsMatch.union(leafSubjectsMatch2)
-        }
-        leafSubjectsMatch
+        //}
        // matching.matchParentEntities(df1,df2, leafSubjectsMatch)
-      }
+      //}
       //matchedEntities.show(200, 80)
-      println("number of matched entities pairs: "+ matchedEntities.count.toString)
+      //println("number of matched entities pairs: "+ matchedEntities.count.toString)
       //matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedSubjects")
     }
 

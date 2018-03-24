@@ -314,7 +314,8 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
   }
 
   val getSimilarityUDF = udf((S: String, S2: String) => {
-    getSimilarity(S, S2)
+    jaccardLiteralSimilarityWithLevenshtein(S,S2)
+    //getSimilarity(S, S2)
   })
 
 }

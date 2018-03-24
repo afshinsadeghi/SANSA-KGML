@@ -108,6 +108,7 @@ class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
     //val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
     val dF2 = df1.select(df1("predicate1")).distinct.crossJoin(df2.select(df2("predicate2")).distinct)
     println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
+
     //Elapsed time: 90.543716752s
     //Elapsed time: 85.588292884s without coalesce(10)
     //    .withColumn("predicate_ending", getLastPartOfURI(col("object2")))
@@ -126,7 +127,7 @@ class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
 
     val wordNetSim = new SimilarityHandler(simThreshold)
       wordNetSim.setWordNetThreshold(0.51)
-    println(wordNetSim.getWordNetThreshold)
+    println("WordNet Sim threshold for matching predicates: "+wordNetSim.getWordNetThreshold)
     val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
       wordNetSim.arePredicatesEqual(getURIEnding(x.getString(0)),
         getURIEnding(x.getString(1)))))
@@ -139,16 +140,16 @@ class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
     //matched.show(40)
     //Elapsed time: 92.068153666s
     //Elapsed time: 103.122292326s with using cache
-    println("number of partitions for matched predicates = " + matched.rdd.partitions.size)
+    //println("number of partitions for matched predicates = " + matched.rdd.partitions.size)
 
     matched.createOrReplaceTempView("triple1")
     val sqlText2 = "SELECT predicate1, predicate2 FROM triple1 where equal = true"
     val predicates = sparkSession.sql(sqlText2)
 
-    if (printReport) {
+    //if (printReport) {
       println("Matched predictes in this step:")
       predicates.show(50, 80)
-    }
+    //}
     /*
 
     The result between drugdunmp dataset and dbpedia
@@ -242,9 +243,7 @@ in Persons dataset:
 
     //"Subject1","Predicate1","Object1","Literal1", "Predicate3","Predicate4","Subject2","Predicate2","Object2","Literal2"
 
-    val typeSubjectWithLiteral = samePredicateSubjectObjects.withColumn("Literal1", getComparableValue(col("object1"))).
-      withColumn("Literal2", getComparableValue(col("object2"))).where(col("Literal1").isNotNull && col("Literal2").isNotNull)
-      .select("Subject1", "Literal1", "Subject2", "Literal2")
+    val typeSubjectWithLiteral = this.getSubjectsWithLiteral(samePredicateSubjectObjects)
 
    if(printReport) typeSubjectWithLiteral.show(15, 50)
 
@@ -257,6 +256,12 @@ in Persons dataset:
     typeSubjectWithLiteral
   }
 
+  def getSubjectsWithLiteral(samePredicateSubjectObjects :DataFrame): DataFrame ={
+    val typeSubjectWithLiteral =  samePredicateSubjectObjects.withColumn("Literal1", getComparableValue(col("object1"))).
+      withColumn("Literal2", getComparableValue(col("object2"))).where(col("Literal1").isNotNull && col("Literal2").isNotNull)
+      .select("Subject1", "Literal1", "Subject2", "Literal2")
+    typeSubjectWithLiteral
+  }
 
   /**
     * Blocking strategy based on types: we take those subject that have the most common types in one partition
@@ -362,15 +367,16 @@ in Persons dataset:
 
   //get parents of a matched entity and pair it with parents of its equivalent in the second data set
   def getParentEntities(df1: DataFrame, df2: DataFrame, leafSubjectsMatch: DataFrame): DataFrame = {
-
     //get parent nodes, removing from them those subjects the matched entities from df1 and df2 subjects
     val parentNode1 = df1.where(col("object1") === leafSubjectsMatch.col("subject1") && !(col("subject1") === leafSubjectsMatch.col("subject1")))
     val parentNode2 = df2.where(col("object2") === leafSubjectsMatch.col("subject2") && !(col("subject2") === leafSubjectsMatch.col("subject2")))
     //parentNode1.join(parentNode2, parentNode1.)
     //getting pair of parents of matched entities
-    parentNode1.join(parentNode2,
-      parentNode1("object1") === leafSubjectsMatch("subject1") &&
-        parentNode2("object1") === leafSubjectsMatch("subject2")  ) //instead of cross join compare those who had same child
+    val parentsNodes = parentNode1.where(col("object1") === leafSubjectsMatch("subject1") ).crossJoin(parentNode2.
+      where(col("object2") === leafSubjectsMatch("subject2")  )) //instead of cross join compare those who had same child
+    println("getiing parent nodes")
+    parentsNodes.show(20,80)
+    parentsNodes
   }
 
 }

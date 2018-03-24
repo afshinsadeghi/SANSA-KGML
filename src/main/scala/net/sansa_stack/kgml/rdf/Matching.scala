@@ -105,10 +105,12 @@ class Matching(sparkSession: SparkSession) extends EvaluationHelper {
 
     SubjectsWithLiteral.createOrReplaceTempView("sameTypes")
 
-    println("ranking of subjects based on their common type.(I used common predicate and objects which is more general than common type)")
     val sqlText2 = "SELECT  subject1, subject2, COUNT(*) as count FROM sameTypes group by subject1,subject2 ORDER BY COUNT(*) DESC"
     val blockedSubjects2 = sparkSession.sql(sqlText2)
-    blockedSubjects2.show(15, 80)
+    if(printReport) {
+      println("ranking of subjects based on their common type.(I used common predicate and objects which is more general than common type)")
+      blockedSubjects2.show(15, 80)
+    }
     /*
     Result for drugbank
 +-----------------------------------------------------------------+--------------------------------------------------------------+--------+
@@ -137,10 +139,10 @@ only showing top 15 rows
 
   def clusterRankCounts(rankedSubjectWithCommonPredicateCount: DataFrame): DataFrame = {
     rankedSubjectWithCommonPredicateCount.createOrReplaceTempView("groupedSubjects")
-    println("ranking of common triple counts based on their count.")
     val sqlText3 = "SELECT  count CommonPredicates , COUNT(*) TriplesWithThisCommonPredicateNumber,  (Count * Count(*)) comparisonsRequired   FROM groupedSubjects group by COUNT ORDER BY COUNT(*) DESC"
     val rankedCounts = sparkSession.sql(sqlText3)
     if (printReport) {
+      println("ranking of common triple counts based on their count.")
       rankedCounts.show(15, 80)
     }
     rankedCounts
@@ -195,6 +197,11 @@ only showing top 15 rows
       samples
     }, persist)
 
+  def scheduleParentMatching( parentNodesWithLiteral: DataFrame, subjectsMatch: DataFrame) : DataFrame = {
+   this.matchCluster(parentNodesWithLiteral,subjectsMatch ) //must have old sim value
+
+    matchedUnion
+  }
   /**
     *
     * @param typeSubjectWithLiteral
@@ -203,13 +210,15 @@ only showing top 15 rows
     */
   def scheduleLeafMatching(typeSubjectWithLiteral: DataFrame, memoryInGB: Integer): DataFrame = {
 
-
+   /*
     typeSubjectWithLiteral.createOrReplaceTempView("sameTypes")
-    println("the number of pairs of triples that are paired by matched predicate")
-    val sqlText3 = "SELECT count(1) matchedPredicateTriplesSum  FROM sameTypes"
-    val matchedPredicateTriplesSum = sparkSession.sql(sqlText3)
-    matchedPredicateTriplesSum.show()
+      println("the number of pairs of triples that are paired by matched predicate")
+      val sqlText3 = "SELECT count(1) matchedPredicateTriplesSum  FROM sameTypes"
+      val matchedPredicateTriplesSum = sparkSession.sql(sqlText3)
+      //var requiredSlots = matchedPredicateTriplesSum.collect.head(0).toString.toInt / slotSize
 
+      matchedPredicateTriplesSum.show()
+*/
 
     val clusteredSubjects = this.clusterRankSubjects(typeSubjectWithLiteral)
     val clusterRankedCounts = this.clusterRankCounts(clusteredSubjects)
@@ -219,11 +228,11 @@ only showing top 15 rows
     val numberOfSameCommonTriples = clusterRankedCounts.select("CommonPredicates", "comparisonsRequired")
       .rdd.map(r => (r(0).toString.toInt, r(1).toString.toInt)).sortByKey(false, 1).collect()
 
-    if (printReport) {
+    //if (printReport) {
       println("Blocking schedule: ")
       print(numberOfSameCommonTriples.map(_.toString().mkString).mkString("\n"))
       println()
-    }
+    //}
 
     val lengthOfNumberOfSameCommonTriples = numberOfSameCommonTriples.length
 
@@ -254,10 +263,9 @@ only showing top 15 rows
 
       //println("commonPredicate subjects loop number " + x + " from " + lengthOfNumberOfSameCommonTriples)
 
-      //var requiredSlots = matchedPredicateTriplesSum.collect.head(0).toString.toInt / slotSize
       val requiredSlots = numberOfSameCommonTriples(lengthOfNumberOfSameCommonTriples - x)._2 / slotSize
       var requiredSplit = 1
-      if (requiredSlots > slots) requiredSplit = requiredSlots / slots
+      //if (requiredSlots > slots) requiredSplit = requiredSlots / slots
 
       val commonPredicates = numberOfSameCommonTriples(lengthOfNumberOfSameCommonTriples - x)._1.toString
       println("In bigger loop: processing triples with number of commonPredicates equal to " + commonPredicates)
@@ -265,10 +273,10 @@ only showing top 15 rows
       var cluster =
         clusters.where(clusters("commonPredicateCount") === commonPredicates)
 
-      //var matched = this.matchACluster(requiredSplit, typeSubjectWithLiteral, cluster, matchedEmptyDF)
       //var matched =
-
-      this.matchAClusterOptimized(requiredSplit, typeSubjectWithLiteral, cluster)
+      this.matchCluster(typeSubjectWithLiteral, cluster)
+      //this.matchACluster(requiredSplit, typeSubjectWithLiteral, cluster)
+      //this.matchAClusterOptimized(requiredSplit, typeSubjectWithLiteral, cluster)
       //   if (x == lengthOfNumberOfSameCommonTriples) { //matchedUnion is empty
       //     this.matchAClusterOptimized(requiredSplit, typeSubjectWithLiteral, cluster)
       //     //matchedUnion.persist()
@@ -285,28 +293,40 @@ only showing top 15 rows
     uniqueLiteralMatchedSubjects
   }
 
-  /**
-    *
-    * @param requiredRepetition
-    * @param typeSubjectWithLiteral
-    * @param cluster
-    * @return
-    */
+  def matchCluster( typeSubjectWithLiteral: DataFrame,
+                    cluster: DataFrame): Unit = {
 
-  def matchAClusterOptimized(requiredRepetition: Int, typeSubjectWithLiteral: DataFrame,
+    val subjectWithLiteral = typeSubjectWithLiteral.toDF("Subject1", "Literal1", "Subject2", "Literal2")
+
+      val firstMatchingLevel = subjectWithLiteral
+        .join(cluster.drop("commonPredicateCount").except(matchedUnion.drop("strSimilarity")),
+          subjectWithLiteral("subject1") === cluster("Subject4") &&
+            subjectWithLiteral("subject2") === cluster("Subject5")
+        , "inner" //  && here filter a portion of slotSize fot each count and put that in a memory block
+      ).select("Subject1", "Literal1", "Subject2", "Literal2")
+     // do not need to split, no collect is used any more.
+      if (printReport) {
+        firstMatchingLevel.show(40, 80)
+      }
+      var matched = getMatchedEntityPairsBasedOnLiteralSim(firstMatchingLevel)
+      matchedUnion = matchedUnion.union(matched).persist()
+  }
+
+/*
+  def matchAClusterOptimized(requiredSplit: Int, typeSubjectWithLiteral: DataFrame,
                              cluster: DataFrame): Unit = {
 
     val subjectWithLiteral = typeSubjectWithLiteral.toDF("Subject3", "Literal1", "Subject4", "Literal2")
-    println("requiredSplit:" + requiredRepetition)
+    println("requiredSplit:" + requiredSplit)
     //var localUnion = matchedEmptyDF //just to inherit type of Data Frame
-    val clustersSeq = this.splitSampleMux(cluster.rdd, requiredRepetition, MEMORY_ONLY, 0)
+    val clustersSeq = this.splitSampleMux(cluster.rdd, requiredSplit, MEMORY_ONLY, 0)
     val schema = new StructType()
       .add(StructField("Subject1", StringType, true))
       .add(StructField("Subject2", StringType, true))
       .add(StructField("commonPredicateCount", LongType, true))
     var counter = 1
     clustersSeq.foreach(a => {
-      println("In parallel cluster number " + counter + " from " + requiredRepetition)
+      println("In parallel cluster number " + counter + " from " + requiredSplit)
       val b = sparkSession.createDataFrame(a, schema).except(matchedUnion)
       //.where(col("Subject4") =!= matchedUnion.col("Subject1") || col("Subject5") =!= matchedUnion.col("Subject2"))
       val firstMatchingLevel =
@@ -340,12 +360,12 @@ only showing top 15 rows
     })
 
   }
-
-  /*
+*/
+/*
     def matchACluster(requiredRepetition: Int, typeSubjectWithLiteral: DataFrame,
-                      cluster: DataFrame, matchedEmptyDF: DataFrame): DataFrame = {
+                      cluster: DataFrame): Unit = {
 
-      var localUnion = matchedEmptyDF //just to inherit type of Data Frame
+      //var localUnion = matchedEmptyDF //just to inherit type of Data Frame
 
       var arr = Array.fill(requiredRepetition)(1.0 / requiredRepetition)
       val clustersArray = cluster.randomSplit(arr)
@@ -372,13 +392,14 @@ only showing top 15 rows
         if (printReport) {
           firstMatchingLevel.show(40, 80)
         }
-        var matched = getMatchedEntitiesBasedOnLiteralSim(firstMatchingLevel)
-        if (y == 0) localUnion = matched
-        else localUnion = localUnion.union(matched)
+        var matched = getMatchedEntityPairsBasedOnLiteralSim(firstMatchingLevel)
+        //if (y == 0) localUnion = matched
+        //else localUnion = localUnion.union(matched)
+        matchedUnion = matchedUnion.union(matched).persist()
       }
-      localUnion
+      //localUnion
     }
-  */
+*/
 
   /**
     *
