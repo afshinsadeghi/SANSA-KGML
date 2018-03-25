@@ -23,8 +23,8 @@ class Matching(sparkSession: SparkSession) extends EvaluationHelper {
   import sparkSession.sqlContext.implicits._
 
   var matchedUnion = Seq.empty[(String, String, String)].toDF("Subject1", "Subject2", "strSimilarity")
-
-
+  var literalBasedClusterRankSubjects = Seq.empty[(String, String, String)].toDF("Subject1", "Subject2", "count")
+  var subjectWithLiteral = Seq.empty[(String, String, String , String)].toDF("Subject1", "Literal1", "Subject2", "Literal2")
   val getURIEnding = udf((str: String) => {
     if (str.length > 0 && str.startsWith("<")) {
       try { //handling only URIs, ignoring literals
@@ -101,20 +101,41 @@ class Matching(sparkSession: SparkSession) extends EvaluationHelper {
     * @param SubjectsWithLiteral
     * @return
     */
-  def clusterRankSubjects(SubjectsWithLiteral: DataFrame): DataFrame = {
+  def predicateBasedClusterRankSubjects(SubjectsWithLiteral: DataFrame): DataFrame = {
 
-    val subjectsWithPredicate = SubjectsWithLiteral.drop("Literal1", "Literal2").dropDuplicates("Subject1", "Predicate1").dropDuplicates("Subject2", "Predicate2")//a subject and predicate can have several different literals
+    val subjectsWithPredicate = SubjectsWithLiteral.drop("Literal1", "Literal2").dropDuplicates("Subject1", "Predicate1","Subject2", "Predicate2") //a subject and predicate can have several different literals
 
     subjectsWithPredicate.createOrReplaceTempView("sameTypes")
 
     val sqlText2 = "SELECT  subject1, subject2, COUNT(*) as count FROM sameTypes group by subject1,subject2 ORDER BY COUNT(*) DESC"
     val blockedSubjects2 = sparkSession.sql(sqlText2)
-    if(printReport) {
-      println("ranking of subjects based on their common type.(I used common predicate and objects which is more general than common type)")
+    if (printReport) {
+      println("Ranking of subjects based on their common predicate")
       blockedSubjects2.show(15, 80)
     }
+    blockedSubjects2
+  }
+    /**
+      * Clustering subjects based on common number of predicates that have literals.
+      * The clusters are ranked and have no common pairs of subjects
+      *
+      * @param SubjectsWithLiteral
+      * @return
+      */
+    def literalBasedClusterRankSubjects(SubjectsWithLiteral: DataFrame): DataFrame = {
+
+      SubjectsWithLiteral.createOrReplaceTempView("sameTypes")//a subject and predicate can have several different literals
+
+      val sqlText2 = "SELECT  subject1, subject2, COUNT(*) as count FROM sameTypes group by subject1,subject2 ORDER BY COUNT(*) DESC"
+      val blockedSubjects2 = sparkSession.sql(sqlText2)
+      if(printReport) {
+        println("Ranking of subjects based on their common predicate and objects)")
+        blockedSubjects2.show(15, 80)
+      }
+      blockedSubjects2
+    }
     /*
-    Result for drugbank
+    Result of literalBasedClusterRankSubjects for drugbank
 +-----------------------------------------------------------------+--------------------------------------------------------------+--------+
 |                                                         subject1|                                                      subject2|count(1)|  this is without using drop
 +-----------------------------------------------------------------+--------------------------------------------------------------+--------+
@@ -136,8 +157,7 @@ class Matching(sparkSession: SparkSession) extends EvaluationHelper {
 +-----------------------------------------------------------------+--------------------------------------------------------------+--------+
 only showing top 15 rows
      */
-    blockedSubjects2
-  }
+
 
   def clusterRankCounts(rankedSubjectWithCommonPredicateCount: DataFrame): DataFrame = {
     rankedSubjectWithCommonPredicateCount.createOrReplaceTempView("groupedSubjects")
@@ -199,9 +219,20 @@ only showing top 15 rows
       samples
     }, persist)
 
-  def scheduleParentMatching( parentNodesWithLiteral: DataFrame, subjectsMatch: DataFrame) : DataFrame = {
-   this.matchCluster(parentNodesWithLiteral,subjectsMatch ) //must have old sim value
+  /**
+    * It considers both WordNet match of URIS and children match and performs a Jaccard sim on all Matched and not matched children
+    * When we go up one level, we assumed all the children of the parent are already compared.
+    * @param parentNodesWithLiteral
+    * @param childSubjectsMatch
+    * @return
+    */
+  def scheduleParentMatching( parentNodesWithLiteral: DataFrame, childSubjectsMatch: DataFrame) : DataFrame = {
 
+    var matched = getMatchedEntityPairsBasedOnLiteralSim(parentNodesWithLiteral)
+    matched = matched.union(childSubjectsMatch)
+    //literalBasedClusterRankSubjects = literalBasedClusterRankSubjects(matched).union(literalBasedClusterRankSubjects) //count matched items a new relation, todo:test it in practice. if the predicate is matched it is being counted already
+    this.aggregateMatchedEntities(matched, literalBasedClusterRankSubjects) //must have old sim value
+    matchedUnion = matchedUnion.union(matched).persist()
     matchedUnion
   }
   /**
@@ -221,8 +252,8 @@ only showing top 15 rows
 
       matchedPredicateTriplesSum.show()
 */
-    val subjectWithLiteral = typeSubjectWithLiteral.drop("Predicate1", "Predicate2")
-    val clusteredSubjects = this.clusterRankSubjects(typeSubjectWithLiteral)
+    subjectWithLiteral = typeSubjectWithLiteral.drop("Predicate1", "Predicate2")
+    val clusteredSubjects = this.predicateBasedClusterRankSubjects(typeSubjectWithLiteral)
     val clusterRankedCounts = this.clusterRankCounts(clusteredSubjects)
 
     val clusters = clusteredSubjects.toDF("Subject4", "Subject5", "commonPredicateCount")
@@ -276,7 +307,9 @@ only showing top 15 rows
         clusters.where(clusters("commonPredicateCount") === commonPredicates)
 
       //var matched =
-      this.matchCluster(subjectWithLiteral, cluster)
+      this.matchCluster(cluster)
+      //this.matchCluster(subjectWithLiteral, cluster)
+
       //this.matchACluster(requiredSplit, subjectWithLiteral, cluster)
       //this.matchAClusterOptimized(requiredSplit, subjectWithLiteral, cluster)
       //   if (x == lengthOfNumberOfSameCommonTriples) { //matchedUnion is empty
@@ -291,20 +324,21 @@ only showing top 15 rows
     if (printReport) {
       println("finding pair sums...")
     }
-    var uniqueLiteralMatchedSubjects = getMatchedEntitiesBasedOnSumLiteralSim(matchedUnion, clusteredSubjects)
+    literalBasedClusterRankSubjects = this.literalBasedClusterRankSubjects(typeSubjectWithLiteral)
+    //literalBasedClusterRankSubjects = clusteredSubjects
+    val uniqueLiteralMatchedSubjects = aggregateMatchedEntities(matchedUnion, literalBasedClusterRankSubjects)
     uniqueLiteralMatchedSubjects
   }
 
-  def matchCluster( typeSubjectWithLiteral: DataFrame,
-                    cluster: DataFrame): Unit = {
+  def matchCluster(cluster: DataFrame): Unit = {
 
-    val subjectWithLiteral = typeSubjectWithLiteral.toDF("Subject1", "Literal1", "Subject2", "Literal2")
+    //val subjectWithLiteral = typeSubjectWithLiteral.toDF("Subject1", "Literal1", "Subject2", "Literal2")
 
       val firstMatchingLevel = subjectWithLiteral
         .join(cluster.drop("commonPredicateCount").except(matchedUnion.drop("strSimilarity")),
-          subjectWithLiteral("subject1") === cluster("Subject4") &&
+            subjectWithLiteral("subject1") === cluster("Subject4") &&
             subjectWithLiteral("subject2") === cluster("Subject5")
-        , "inner" //  && here filter a portion of slotSize fot each count and put that in a memory block
+        , "inner" //  && here filter a portion of slotSize for each count and put that in a memory block
       ).select("Subject1", "Literal1", "Subject2", "Literal2")
      // do not need to split, no collect is used any more.
       if (printReport) {
@@ -417,7 +451,7 @@ only showing top 15 rows
     //  import sparkSession.sqlContext.implicits._
     //   val subjectsComparedByLiteral = rdd1.toDF("Subject1", "Subject2", "strSimilarity")
     if (printReport) {
-      println("number of matched entities:" + subjectsComparedByLiteral.count())
+      println("Number of compared pairs:" + subjectsComparedByLiteral.count())
       subjectsComparedByLiteral.show(40)
     }
     subjectsComparedByLiteral.createOrReplaceTempView("matched")
@@ -435,14 +469,14 @@ only showing top 15 rows
 
 
   /**
-    * I collect sum of similarity for each pair of subject1 and subject2 sum the similairty of all their literls.
+    * I collect sum of similarity for each pair of subject1 and subject2 sum the similarity of all their literals and make a norm of them.
     * those literals that are more than the threshold
     * so here we have unique pairs of subject1 and subject2
     *
     * @param unionMatched
     * @return
     */
-  def getMatchedEntitiesBasedOnSumLiteralSim(unionMatched: DataFrame, clusteredSubjects: DataFrame): DataFrame = {
+  def aggregateMatchedEntities(unionMatched: DataFrame, clusteredSubjects: DataFrame): DataFrame = {
 
     unionMatched.createOrReplaceTempView("matched")
     val sqlText1 = "SELECT Subject1, Subject2, SUM(strSimilarity) FROM matched Group By Subject1, Subject2"
@@ -454,7 +488,7 @@ only showing top 15 rows
     val matchedSubjectsJoined = matchedSubjects.join(clusteredSubjects, matchedSubjects("Subject3") ===
       clusteredSubjects("Subject1") && matchedSubjects("Subject4") === clusteredSubjects("Subject2"))
     matchedSubjectsJoined.createOrReplaceTempView("matchedJoined1")
-    val sqlText2 = "SELECT Subject1, Subject2,  sumStrSimilarity/count normStrSim FROM matchedJoined1"
+    val sqlText2 = "SELECT Subject1, Subject2,  sumStrSimilarity/count normStrSim FROM matchedJoined1" //its Jaccard of children sim as in http://afshn.com/papers/Sadeghi_SCM-KG.pdf
     val pairedSubjectsWithNormSim = sparkSession.sql(sqlText2)
 
     pairedSubjectsWithNormSim.createOrReplaceTempView("pairedSubjects")

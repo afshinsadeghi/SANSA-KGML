@@ -46,13 +46,13 @@ object ModuleExecutor {
       input1 = "EntityMatching"
       //input2 = "datasets/dbpediamapping50k.nt"
       //input3 = "datasets/yagofact50k.nt"
-      input2 = "datasets/dbpediaOnlyAppleobjects.nt"
-      input3 = "datasets/yagoonlyAppleobjects.nt"
-      //input2 = "datasets/dbpediaSimple.nt"
-      //input3 = "datasets/yagoSimple.nt"
+      //input2 = "datasets/dbpediaOnlyAppleobjects.nt"
+      //input3 = "datasets/yagoonlyAppleobjects.nt"
+      input2 = "datasets/dbpediaSimple.nt"
+      input3 = "datasets/yagoSimple.nt"
       //input2 = "datasets/drugbank_dump.nt"
       //input3 = "datasets/dbpedia.drugs.nt"
-      //input2 = "datasets/person11.nt"
+      //input2 = "datasets/person11.nt" //   894 matched
       //input3 = "datasets/person12.nt"
     }
     println(input1)
@@ -168,46 +168,33 @@ object ModuleExecutor {
     if (input1 == "EntityMatching") {
       val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
       val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
-      val leafSubjectsMatch = profile {
+
+      val matchedEntites = profile {
+
         val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<")).persist()
         val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")).persist()
         val predicatePairs = blocking.getMatchedPredicates(dfTripleWithLiteral1, dfTripleWithLiteral2)
 
-
         val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
         //first level match using leaf literals
-        val leafSubjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory).persist()
-        leafSubjectsMatch
+        var subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory).persist()
+        //val allPredicatePairs = blocking.getMatchedPredicates(df1, df2)
+
+        //another method could be filtering those who matched by literals, but we grow the matching network
+        var parentNodes = blocking.getParentEntities(df1, df2, subjectsMatch)
+
+        while (!parentNodes.take(1).isEmpty) {
+          println("In loop to match parents, parents count= " + parentNodes.count())
+          val parentSubjectsWithLiteral = blocking.getSubjectsWithLiteral(parentNodes)
+          val parentSubjectsMatch = matching.scheduleParentMatching(parentSubjectsWithLiteral, subjectsMatch)
+          subjectsMatch = subjectsMatch.union(parentSubjectsMatch)
+          parentNodes = blocking.getParentEntities(df1, df2, subjectsMatch)
+        }
+        subjectsMatch
       }
-      leafSubjectsMatch.show(20, 80)
-      //todo: repeat this with full df1 and df2
-      //val allPredicatePairs = blocking.getMatchedPredicates(df1, df2)
-
-      //var subjects = blocking.addSubjectsLiteral(df1, df2)
-      //filter those who matched by literals
-      var parentNodes = blocking.getParentEntities(df1, df2, leafSubjectsMatch)
-      var parentSubjectsWithLiteral = blocking.getSubjectsWithLiteral(parentNodes)
-      var subjectsMatch = leafSubjectsMatch
-      parentSubjectsWithLiteral.show(20, 80)
-      //        while (!parentSubjects.rdd.isEmpty()) {
-      println("In loop to match parents, parents count= " + parentNodes.count())
-      var parentSubjectsMatch = matching.scheduleParentMatching(parentSubjectsWithLiteral, subjectsMatch)
-
-      subjectsMatch = subjectsMatch.union(parentSubjectsMatch)
-      parentNodes = blocking.getParentEntities(df1, df2, subjectsMatch)
-      parentSubjectsWithLiteral = blocking.getSubjectsWithLiteral(parentNodes)
-      //        }
-      //matching.matchNonLiteralSubjectsBasedOnWordNet(dfTripleWithNonLiteral1,dfTripleWithNonLiteral2, literalBasedSubjectMatchs, predicatePairs)
-      //val parentEntities = blocking.getParentEntities(df1, df2 ,leafSubjectsMatch)
-      // if(parentSubjects.count() > 0) {
-      //  var leafSubjectsMatch2 = matching.scheduleMatching(parentEntities, memory)
-      //  leafSubjectsMatch = leafSubjectsMatch.union(leafSubjectsMatch2)
-      //}
-      // matching.matchParentEntities(df1,df2, leafSubjectsMatch)
-      //}
-      //matchedEntities.show(200, 80)
-      //println("number of matched entities pairs: "+ matchedEntities.count.toString)
-      //matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedSubjects")
+      matchedEntites.show(20, 80)
+      println("number of matched entities pairs: " + matchedEntites.count.toString)
+      //subjectsMatch.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedSubjects")
     }
 
 

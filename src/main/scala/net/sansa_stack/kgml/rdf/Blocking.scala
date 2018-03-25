@@ -268,7 +268,7 @@ in Persons dataset:
   def getSubjectsWithLiteral(samePredicateSubjectObjects: DataFrame): DataFrame = {
     val typeSubjectWithLiteral = samePredicateSubjectObjects.withColumn("Literal1", getComparableValue(col("object1"))).
       withColumn("Literal2", getComparableValue(col("object2"))).where(col("Literal1").isNotNull && col("Literal2").isNotNull)
-      .select("Subject1", "Literal1", "Subject2", "Literal2", "Predicate1", "Predicate2")
+      .select("Subject1", "Literal1", "Subject2", "Literal2", "Predicate1", "Predicate2") //Predicates are used in clusterranking subjects
     //typeSubjectWithLiteral.show(60,40)  //here one subject and predicate can have several different literals
     typeSubjectWithLiteral
   }
@@ -378,21 +378,22 @@ in Persons dataset:
   //get parents of a matched entity and pair it with parents of its equivalent in the second data set
   def getParentEntities(df1: DataFrame, df2: DataFrame, leafSubjectsMatch: DataFrame): DataFrame = {
     //get parent nodes, removing from them those subjects the matched entities from df1 and df2 subjects
-    val parentNode1 = df1.where(col("object1") === leafSubjectsMatch.col("subject1"))
-      .except(df1.where(col("subject1") === leafSubjectsMatch.col("subject1")))
+    val matchedSubject = leafSubjectsMatch.toDF("Subject3", "Subject4", "normStrSim").drop("normStrSim")
 
-    val parentNode2 = df2.where(col("object2") === leafSubjectsMatch.col("subject2"))
-      .except(df2.where(col("subject2") === leafSubjectsMatch.col("subject2")))
+    var parentNode1 = df1.join(matchedSubject, df1("object1") === matchedSubject("subject3"))
+    parentNode1 = parentNode1.where(col("subject1") =!= matchedSubject("Subject3"))
 
-    //parentNode1.join(parentNode2, parentNode1.)
+    var parentNode2 = df2.join(matchedSubject, df2("object2") === matchedSubject("subject4"))
+    parentNode2 = parentNode2.where(col("subject2") =!= matchedSubject("subject4"))
+
     //going one step in the neighborhood and getting pair of parents of matched entities to compare
-    val parentsNodes = parentNode1.where(col("object1") === leafSubjectsMatch("subject1")).crossJoin(parentNode2.
-      where(col("object2") === leafSubjectsMatch("subject2"))) //instead of cross join compare those who had same child
-    if(printReport) {
+    val parentsNodes = parentNode1.join(parentNode2,
+      parentNode1("Subject4") === parentNode2("Subject3"), "cross") //instead of cross join compare those who had same child
+    if (printReport) {
       println("getting parent nodes..")
       parentsNodes.show(20, 80)
     }
-    parentsNodes
+    parentsNodes.persist()
   }
 
 }
