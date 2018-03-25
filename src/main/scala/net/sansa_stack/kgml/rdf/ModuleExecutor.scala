@@ -182,7 +182,8 @@ object ModuleExecutor {
 
         //another method could be filtering those who matched by literals, but we grow the matching network
         var parentNodes = blocking.getParentEntities(df1, df2, subjectsMatch)
-
+        var counter = 0
+        subjectsMatch.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities"+ counter.toString)
         while (!parentNodes.take(1).isEmpty) {
           println("In loop to match parents, parents count= " + parentNodes.count())
           val parentSubjectsWithLiteral = blocking.getSubjectsWithLiteral(parentNodes)
