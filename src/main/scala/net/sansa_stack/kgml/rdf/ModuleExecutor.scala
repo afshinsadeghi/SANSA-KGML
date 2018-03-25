@@ -24,6 +24,7 @@ object ModuleExecutor {
   var input1 = "" // the module name
   var input2 = "" // parameters
   var input3 = ""
+
   def main(args: Array[String]) = {
     println("running a module...")
 
@@ -45,10 +46,10 @@ object ModuleExecutor {
       input1 = "EntityMatching"
       //input2 = "datasets/dbpediamapping50k.nt"
       //input3 = "datasets/yagofact50k.nt"
-      //input2 = "datasets/dbpediaOnlyAppleobjects.nt"
-      //input3 = "datasets/yagoonlyAppleobjects.nt"
-      input2 = "datasets/dbpediaSimple.nt"
-      input3 = "datasets/yagoSimple.nt"
+      input2 = "datasets/dbpediaOnlyAppleobjects.nt"
+      input3 = "datasets/yagoonlyAppleobjects.nt"
+      //input2 = "datasets/dbpediaSimple.nt"
+      //input3 = "datasets/yagoSimple.nt"
       //input2 = "datasets/drugbank_dump.nt"
       //input3 = "datasets/dbpedia.drugs.nt"
       //input2 = "datasets/person11.nt"
@@ -57,7 +58,7 @@ object ModuleExecutor {
     println(input1)
     println(input2)
     println(input3)
-    val gb = 1024*1024*1024
+    val gb = 1024 * 1024 * 1024
     val runTime = Runtime.getRuntime
     var memory = (runTime.maxMemory / gb).toInt
     if (memory == 0) memory = 1
@@ -67,6 +68,7 @@ object ModuleExecutor {
       .master("local[*]")
       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .config("spark.kryoserializer.buffer.max", "1024")
+      .config("spark.sql.broadcastTimeout", "1200")
       .appName("Triple merger of " + input1 + " and " + input2 + " ")
       .getOrCreate()
 
@@ -79,7 +81,7 @@ object ModuleExecutor {
       StructField("Predicate", StringType, true),
       StructField("Object", StringType, true),
       StructField("dot", StringType, true))
-     )
+    )
 
 
     var DF1 = sparkSession.read.format("com.databricks.spark.csv")
@@ -96,24 +98,17 @@ object ModuleExecutor {
       .option("header", "false")
       .option("inferSchema", "false")
       .option("comment", "#")
-      .option("delimiter", " ")  // for DBpedia some times it is \t
+      .option("delimiter", " ") // for DBpedia some times it is \t
       .option("maxColumns", "4")
       .schema(stringSchema)
       .load(input3)
 
-   DF1 = DF1.drop(DF1.col("dot"))
-   DF2 = DF2.drop(DF2.col("dot"))
+    DF1 = DF1.drop(DF1.col("dot"))
+    DF2 = DF2.drop(DF2.col("dot"))
 
-    val df1 = DF1.toDF("Subject1", "Predicate1", "Object1")
-    val df2 = DF2.toDF("Subject2", "Predicate2", "Object2")
-
-    //removing duplicates
-    df1.createTempView("x")
-    sparkSession.sql("SELECT subject1, predicate1, object1  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject1 ORDER BY subject1 DESC) rn FROM x) predicate1 WHERE rn = 1").persist()
-
-    //removing duplicates
-    df2.createOrReplaceTempView("x")
-    sparkSession.sql("SELECT subject2, predicate2, object2  FROM( SELECT *, ROW_NUMBER()OVER(PARTITION BY subject2 ORDER BY subject2 DESC) rn FROM x) predicate2 WHERE rn = 1").persist()
+    // defining schema and removing duplicates
+    val df1 = DF1.toDF("Subject1", "Predicate1", "Object1").dropDuplicates("Subject1", "Predicate1", "Object1")
+    val df2 = DF2.toDF("Subject2", "Predicate2", "Object2").dropDuplicates("Subject2", "Predicate2", "Object2")
 
     if (input1 == "PredicatePartitioning") {
       var partitions = new Partitioning(sparkSession.sparkContext)
@@ -154,55 +149,61 @@ object ModuleExecutor {
 
       val SubjectsWithLiteral = profile {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
-        val blocking =  new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
+        val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
 
         val predicatePairs = blocking.getMatchedPredicates(df1, df2)
         blocking.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
       }
       SubjectsWithLiteral.show(200, 80)
     }
+    //idea first round only use string matching on literal objects. Then on next rounds compare parents with parents
+    // match them using both wordnet and predicate. if in their childer there are already a child matched, do not match, instead add its smilariy and count that at agregate time.
+    // and learn new predicates pairs by that. and compare more .
+
+    //the blocking base on common predicate works for small dataset but not for varient kgs
+    //Difference of KG and dataset matching. dedicate a step for that in the paper, and proposal
+    // in kg ontology is varient, for example common predicate is good for Person dataset but not debpida
+    // there I should rank predicates to find those that are most repeated in the whole dataset. and make itersect of them
 
     if (input1 == "EntityMatching") {
-        val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
-        val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
+      val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
+      val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
       val leafSubjectsMatch = profile {
-       // val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<")).persist()
-        //val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")).persist()
+        val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<")).persist()
+        val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")).persist()
+        val predicatePairs = blocking.getMatchedPredicates(dfTripleWithLiteral1, dfTripleWithLiteral2)
 
-        var predicatePairs = blocking.getMatchedPredicates(df1, df2)
 
-        val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
         //first level match using leaf literals
         val leafSubjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory).persist()
         leafSubjectsMatch
       }
-        leafSubjectsMatch.show(20,80)
-        //todo: repeat this with full df1 and df2
-        //val dfTripleWithNonLiteral1 = df1.filter(col("object1").startsWith("<")).persist()
-        //val dfTripleWithNonLiteral2 = df2.filter(col("object2").startsWith("<")).persist()
-        val allPredicatePairs = blocking.getMatchedPredicates(df1, df2)
+      leafSubjectsMatch.show(20, 80)
+      //todo: repeat this with full df1 and df2
+      //val allPredicatePairs = blocking.getMatchedPredicates(df1, df2)
 
-        //var subjects = blocking.addSubjectsLiteral(df1, df2)
-        //filter those who matched by literals
-        var parentNodes = blocking.getParentEntities(df1, df2 ,leafSubjectsMatch)
-        var parentSubjectsWithLiteral = blocking.getSubjectsWithLiteral(parentNodes)
-        parentSubjectsWithLiteral.show(20,80)
-        var subjectsMatch = leafSubjectsMatch
-//        while (!parentSubjects.rdd.isEmpty()) {
-          println("In loop to match parents, parents count= " + parentNodes.count())
-         var parentSubjectsMatch = matching.scheduleParentMatching( parentSubjectsWithLiteral, subjectsMatch)
+      //var subjects = blocking.addSubjectsLiteral(df1, df2)
+      //filter those who matched by literals
+      var parentNodes = blocking.getParentEntities(df1, df2, leafSubjectsMatch)
+      var parentSubjectsWithLiteral = blocking.getSubjectsWithLiteral(parentNodes)
+      var subjectsMatch = leafSubjectsMatch
+      parentSubjectsWithLiteral.show(20, 80)
+      //        while (!parentSubjects.rdd.isEmpty()) {
+      println("In loop to match parents, parents count= " + parentNodes.count())
+      var parentSubjectsMatch = matching.scheduleParentMatching(parentSubjectsWithLiteral, subjectsMatch)
 
-          subjectsMatch = subjectsMatch.union(parentSubjectsMatch)
-          parentNodes = blocking.getParentEntities(df1, df2 , subjectsMatch)
-          parentSubjectsWithLiteral = blocking.getSubjectsWithLiteral(parentNodes)
-//        }
-        //matching.matchNonLiteralSubjectsBasedOnWordNet(dfTripleWithNonLiteral1,dfTripleWithNonLiteral2, literalBasedSubjectMatchs, predicatePairs)
-        //val parentEntities = blocking.getParentEntities(df1, df2 ,leafSubjectsMatch)
-       // if(parentSubjects.count() > 0) {
-        //  var leafSubjectsMatch2 = matching.scheduleMatching(parentEntities, memory)
-        //  leafSubjectsMatch = leafSubjectsMatch.union(leafSubjectsMatch2)
-        //}
-       // matching.matchParentEntities(df1,df2, leafSubjectsMatch)
+      subjectsMatch = subjectsMatch.union(parentSubjectsMatch)
+      parentNodes = blocking.getParentEntities(df1, df2, subjectsMatch)
+      parentSubjectsWithLiteral = blocking.getSubjectsWithLiteral(parentNodes)
+      //        }
+      //matching.matchNonLiteralSubjectsBasedOnWordNet(dfTripleWithNonLiteral1,dfTripleWithNonLiteral2, literalBasedSubjectMatchs, predicatePairs)
+      //val parentEntities = blocking.getParentEntities(df1, df2 ,leafSubjectsMatch)
+      // if(parentSubjects.count() > 0) {
+      //  var leafSubjectsMatch2 = matching.scheduleMatching(parentEntities, memory)
+      //  leafSubjectsMatch = leafSubjectsMatch.union(leafSubjectsMatch2)
+      //}
+      // matching.matchParentEntities(df1,df2, leafSubjectsMatch)
       //}
       //matchedEntities.show(200, 80)
       //println("number of matched entities pairs: "+ matchedEntities.count.toString)
@@ -212,7 +213,7 @@ object ModuleExecutor {
 
     if (input1 == "CountSameASLinks") {
       val typeStats = new net.sansa_stack.kgml.rdf.TypeStats(sparkSession)
-        typeStats.countSameASLinks(df1)
+      typeStats.countSameASLinks(df1)
     }
 
 

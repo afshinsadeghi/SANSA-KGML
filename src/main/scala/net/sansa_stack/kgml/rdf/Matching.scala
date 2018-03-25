@@ -103,7 +103,9 @@ class Matching(sparkSession: SparkSession) extends EvaluationHelper {
     */
   def clusterRankSubjects(SubjectsWithLiteral: DataFrame): DataFrame = {
 
-    SubjectsWithLiteral.createOrReplaceTempView("sameTypes")
+    val subjectsWithPredicate = SubjectsWithLiteral.drop("Literal1", "Literal2").dropDuplicates("Subject1", "Predicate1").dropDuplicates("Subject2", "Predicate2")//a subject and predicate can have several different literals
+
+    subjectsWithPredicate.createOrReplaceTempView("sameTypes")
 
     val sqlText2 = "SELECT  subject1, subject2, COUNT(*) as count FROM sameTypes group by subject1,subject2 ORDER BY COUNT(*) DESC"
     val blockedSubjects2 = sparkSession.sql(sqlText2)
@@ -114,9 +116,9 @@ class Matching(sparkSession: SparkSession) extends EvaluationHelper {
     /*
     Result for drugbank
 +-----------------------------------------------------------------+--------------------------------------------------------------+--------+
-|                                                         subject1|                                                      subject2|count(1)|
+|                                                         subject1|                                                      subject2|count(1)|  this is without using drop
 +-----------------------------------------------------------------+--------------------------------------------------------------+--------+
-|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00112>|                            <http://dbpedia.org/resource/2C-B>|    1268|
+|<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00112>|                            <http://dbpedia.org/resource/2C-B>|    1268| this is number of literals not predicates
 |<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB01248>|                            <http://dbpedia.org/resource/2C-B>|    1146|
 |<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00112>|                        <http://dbpedia.org/resource/3-sphere>|    1057|
 |<http://www4.wiwiss.fu-berlin.de/drugbank/resource/drugs/DB00515>|                            <http://dbpedia.org/resource/2C-B>|    1034|
@@ -211,7 +213,7 @@ only showing top 15 rows
   def scheduleLeafMatching(typeSubjectWithLiteral: DataFrame, memoryInGB: Integer): DataFrame = {
 
    /*
-    typeSubjectWithLiteral.createOrReplaceTempView("sameTypes")
+    subjectWithLiteral.createOrReplaceTempView("sameTypes")
       println("the number of pairs of triples that are paired by matched predicate")
       val sqlText3 = "SELECT count(1) matchedPredicateTriplesSum  FROM sameTypes"
       val matchedPredicateTriplesSum = sparkSession.sql(sqlText3)
@@ -219,7 +221,7 @@ only showing top 15 rows
 
       matchedPredicateTriplesSum.show()
 */
-
+    val subjectWithLiteral = typeSubjectWithLiteral.drop("Predicate1", "Predicate2")
     val clusteredSubjects = this.clusterRankSubjects(typeSubjectWithLiteral)
     val clusterRankedCounts = this.clusterRankCounts(clusteredSubjects)
 
@@ -261,10 +263,10 @@ only showing top 15 rows
     //The loop starts with those who have the most common predicates and if they match, do not compare them with other entities
     for (x <- lengthOfNumberOfSameCommonTriples to last by -1) {
 
-      //println("commonPredicate subjects loop number " + x + " from " + lengthOfNumberOfSameCommonTriples)
+      println("commonPredicate subjects loop number " + x + " from " + lengthOfNumberOfSameCommonTriples)
 
-      val requiredSlots = numberOfSameCommonTriples(lengthOfNumberOfSameCommonTriples - x)._2 / slotSize
-      var requiredSplit = 1
+//      val requiredSlots = numberOfSameCommonTriples(lengthOfNumberOfSameCommonTriples - x)._2 / slotSize
+//      var requiredSplit = 1
       //if (requiredSlots > slots) requiredSplit = requiredSlots / slots
 
       val commonPredicates = numberOfSameCommonTriples(lengthOfNumberOfSameCommonTriples - x)._1.toString
@@ -274,15 +276,15 @@ only showing top 15 rows
         clusters.where(clusters("commonPredicateCount") === commonPredicates)
 
       //var matched =
-      this.matchCluster(typeSubjectWithLiteral, cluster)
-      //this.matchACluster(requiredSplit, typeSubjectWithLiteral, cluster)
-      //this.matchAClusterOptimized(requiredSplit, typeSubjectWithLiteral, cluster)
+      this.matchCluster(subjectWithLiteral, cluster)
+      //this.matchACluster(requiredSplit, subjectWithLiteral, cluster)
+      //this.matchAClusterOptimized(requiredSplit, subjectWithLiteral, cluster)
       //   if (x == lengthOfNumberOfSameCommonTriples) { //matchedUnion is empty
-      //     this.matchAClusterOptimized(requiredSplit, typeSubjectWithLiteral, cluster)
+      //     this.matchAClusterOptimized(requiredSplit, subjectWithLiteral, cluster)
       //     //matchedUnion.persist()
       //    }
       //    else {
-      //       this.matchAClusterOptimized(requiredSplit, typeSubjectWithLiteral, cluster)
+      //       this.matchAClusterOptimized(requiredSplit, subjectWithLiteral, cluster)
       //       //matchedUnion.persist()
       //     }
     }
