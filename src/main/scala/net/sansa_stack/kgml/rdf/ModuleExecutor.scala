@@ -192,9 +192,9 @@ object ModuleExecutor {
         }
         subjectsMatch
       }
+      matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities")
       matchedEntites.show(20, 80)
       println("number of matched entities pairs: " + matchedEntites.count.toString)
-      matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities")
     }
 
 
