@@ -54,6 +54,8 @@ object ModuleExecutor {
       //input3 = "datasets/dbpedia.drugs.nt"
       input2 = "datasets/person11.nt" //   894 matched
       input3 = "datasets/person12.nt"
+      input2 = "datasets/abstract1.nt"
+      input3 = "datasets/abstract2.nt"
     }
     println(input1)
     println(input2)
@@ -168,12 +170,16 @@ object ModuleExecutor {
     if (input1 == "EntityMatching") {
       val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
       val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
-
-      val matchedEntites = profile {
+      val rExtractor = new net.sansa_stack.kgml.rdf.RelationExtractor
+      val matchedEntities = profile {
 
         val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<"))//.persist()
         val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<"))//.persist()
-        val predicatePairs = blocking.getMatchedPredicates(dfTripleWithLiteral1, dfTripleWithLiteral2)
+
+        //val dfNoLiteral1 = df1.filter(col("object1").startsWith("<"))//.persist()
+        //val dfNoLiteral2 = df2.filter(col("object2").startsWith("<"))//.persist()
+
+        var predicatePairs = blocking.getMatchedPredicates(dfTripleWithLiteral1, dfTripleWithLiteral2)
 
         val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
         //first level match using leaf literals
@@ -181,21 +187,34 @@ object ModuleExecutor {
         //val allPredicatePairs = blocking.getMatchedPredicates(df1, df2)
 
         //another method could be filtering those who matched by literals, but we grow the matching network
-        var parentNodes = blocking.getParentEntities(df1, df2, subjectsMatch)
+        var parentNodes1 = rExtractor.getParentEntities(df1, subjectsMatch.select("subject1").toDF("Subject3"))
+        var parentNodes2 = rExtractor.getParentEntities( df2.toDF("Subject1", "Predicate1", "Object1"),
+          subjectsMatch.select("subject2").toDF("Subject3")).toDF("Subject2", "Predicate2", "Object2")
+
+        predicatePairs= blocking.getMatchedPredicates(parentNodes1,parentNodes2)
+        var parentTriples = blocking.BlockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
+
         var counter = 0
-        subjectsMatch.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities"+ counter.toString)
-        while (!parentNodes.take(1).isEmpty) {
-          println("In loop to match parents, parents count= " + parentNodes.count())
-          val parentSubjectsWithLiteral = blocking.getSubjectsWithLiteral(parentNodes)
-          val parentSubjectsMatch = matching.scheduleParentMatching(parentSubjectsWithLiteral, subjectsMatch)
+//        subjectsMatch.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities"+ counter.toString)
+        while (!parentTriples.take(1).isEmpty) {
+          counter = counter + 1
+          println("In loop to match parents, parents count= " + parentTriples.count())
+          val parentSubjectsMatch = matching.scheduleParentMatching(parentTriples, subjectsMatch)
           subjectsMatch = subjectsMatch.union(parentSubjectsMatch)
-          parentNodes = blocking.getParentEntities(df1, df2, subjectsMatch)
+          parentNodes1 = rExtractor.getParentEntities(df1, subjectsMatch.select("subject1").toDF("Subject3"))
+          parentNodes2 = rExtractor.getParentEntities( df2.toDF("Subject1", "Predicate1", "Object1"),
+            subjectsMatch.select("subject2").toDF("Subject3")).toDF("Subject2", "Predicate2", "Object2")
+
+          predicatePairs= blocking.getMatchedPredicates(parentNodes1,parentNodes2)
+          parentTriples = blocking.BlockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
+          //         subjectsMatch.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities"+ counter.toString)
+
         }
         subjectsMatch
       }
-      matchedEntites.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities")
-      matchedEntites.show(20, 80)
-      println("number of matched entities pairs: " + matchedEntites.count.toString)
+ //     matchedEntities.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities")
+      matchedEntities.show(20, 80)
+      println("number of matched entities pairs: " + matchedEntities.count.toString)
     }
 
 

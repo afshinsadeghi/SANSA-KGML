@@ -375,25 +375,5 @@ in Persons dataset:
     typedTriples2
   }
 
-  //get parents of a matched entity and pair it with parents of its equivalent in the second data set
-  def getParentEntities(df1: DataFrame, df2: DataFrame, leafSubjectsMatch: DataFrame): DataFrame = {
-    //get parent nodes, removing from them those subjects the matched entities from df1 and df2 subjects
-    val matchedSubject = leafSubjectsMatch.toDF("Subject3", "Subject4", "normStrSim").drop("normStrSim")
-
-    var parentNode1 = df1.join(matchedSubject, df1("object1") === matchedSubject("subject3"))
-    parentNode1 = parentNode1.where(col("subject1") =!= matchedSubject("Subject3"))
-
-    var parentNode2 = df2.join(matchedSubject, df2("object2") === matchedSubject("subject4"))
-    parentNode2 = parentNode2.where(col("subject2") =!= matchedSubject("subject4"))
-
-    //going one step in the neighborhood and getting pair of parents of matched entities to compare
-    val parentsNodes = parentNode1.join(parentNode2,
-      parentNode1("Subject4") === parentNode2("Subject3"), "cross") //instead of cross join compare those who had same child
-    if (printReport) {
-      println("getting parent nodes..")
-      parentsNodes.show(20, 80)
-    }
-    parentsNodes.persist()
-  }
 
 }

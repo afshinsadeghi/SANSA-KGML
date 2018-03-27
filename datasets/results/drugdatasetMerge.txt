@@ -1,0 +1,210 @@
+Stats of dataset 1...
+5 sample Triples of the dataset
++----------------------------------------+----------------------------------------+----------------------------------------+
+|                                Subject1|                              Predicate1|                                 Object1|
++----------------------------------------+----------------------------------------+----------------------------------------+
+|<http://www4.wiwiss.fu-berlin.de/drug...|<http://www.w3.org/1999/02/22-rdf-syn...|<http://www.w3.org/1999/02/22-rdf-syn...|
+|<http://www4.wiwiss.fu-berlin.de/drug...|<http://www.w3.org/1999/02/22-rdf-syn...|<http://www.w3.org/1999/02/22-rdf-syn...|
+|<http://www4.wiwiss.fu-berlin.de/drug...|<http://www.w3.org/1999/02/22-rdf-syn...|<http://www.w3.org/1999/02/22-rdf-syn...|
+|<http://www4.wiwiss.fu-berlin.de/drug...|<http://www.w3.org/1999/02/22-rdf-syn...|<http://www.w3.org/1999/02/22-rdf-syn...|
+|<http://www4.wiwiss.fu-berlin.de/drug...|<http://www.w3.org/1999/02/22-rdf-syn...|<http://www.w3.org/1999/02/22-rdf-syn...|
++----------------------------------------+----------------------------------------+----------------------------------------+
+only showing top 5 rows
+
+Number of Triples with type
++--------+
+|count(1)|
++--------+
+|   24522|
++--------+
+
+Distribution of objects with type
++----------------------------------------+--------+
+|                                 object1|count(1)|
++----------------------------------------+--------+
+|<http://www4.wiwiss.fu-berlin.de/drug...|    4772|
+|<http://www4.wiwiss.fu-berlin.de/drug...|   10153|
+|<http://www4.wiwiss.fu-berlin.de/drug...|    4772|
+|<http://www4.wiwiss.fu-berlin.de/drug...|      53|
+|<http://www.w3.org/2000/01/rdf-schema...|       6|
+|<http://www4.wiwiss.fu-berlin.de/drug...|      96|
+|<http://www.w3.org/1999/02/22-rdf-syn...|     117|
+|<http://www4.wiwiss.fu-berlin.de/drug...|    4553|
+|                                     SUM|   24522|
++----------------------------------------+--------+
+
+distribution of subjects with type
++----------------------------------------+--------+
+|                                subject1|count(1)|
++----------------------------------------+--------+
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       2|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
+|<http://www4.wiwiss.fu-berlin.de/drug...|       1|
++----------------------------------------+--------+
+only showing top 40 rows
+
+Number of subjects with no type
++--------+
+|count(1)|
++--------+
+|       0|
++--------+
+
+Stats of dataset 2...
+5 sample Triples of the dataset
++----------------------------------------+----------------------------------------+----------------------------------------+
+|                                Subject1|                              Predicate1|                                 Object1|
++----------------------------------------+----------------------------------------+----------------------------------------+
+|<http://dbpedia.org/resource/2,5-Dime...|<http://www.w3.org/1999/02/22-rdf-syn...|<http://dbpedia.org/class/yago/Physic...|
+|<http://dbpedia.org/resource/4,16-And...|   <http://dbpedia.org/ontology/pubchem>|                             "9925482" .|
+|<http://dbpedia.org/resource/1-(4-(Tr...|<http://www.w3.org/1999/02/22-rdf-syn...|<http://dbpedia.org/class/yago/Vermif...|
+|    <http://dbpedia.org/resource/3C-DFE>|  <http://www.w3.org/2002/07/owl#sameAs>|<http://wikidata.dbpedia.org/resource...|
+|<http://dbpedia.org/resource/3-Fluoro...|  <http://dbpedia.org/ontology/abstract>|"3-Fluoromethcathinone (also known as...|
++----------------------------------------+----------------------------------------+----------------------------------------+
+only showing top 5 rows
+
+Number of Triples with type
++--------+
+|count(1)|
++--------+
+|    2809|
++--------+
+
+Distribution of objects with type
++----------------------------------------+--------+
+|                                 object1|count(1)|
++----------------------------------------+--------+
+|<http://dbpedia.org/class/yago/Wikica...|       1|
+|<http://dbpedia.org/class/yago/Proble...|       1|
+|<http://dbpedia.org/class/yago/Conten...|       1|
+|<http://dbpedia.org/class/yago/Wikica...|       1|
+|<http://dbpedia.org/class/yago/Cognit...|      28|
+|<http://dbpedia.org/class/yago/State1...|       1|
+|<http://dbpedia.org/class/yago/Euphor...|       1|
+|<http://dbpedia.org/class/yago/Inhibi...|       1|
+|<http://dbpedia.org/class/yago/Liquid...|       5|
+|<http://dbpedia.org/class/yago/Hydroc...|       1|
+|<http://dbpedia.org/class/yago/Celest...|       1|
+|<http://dbpedia.org/class/yago/Digit1...|       1|
+|<http://dbpedia.org/class/yago/Higher...|       1|
+|<http://dbpedia.org/class/yago/Wikica...|       1|
+|<http://dbpedia.org/class/yago/Wikica...|       4|
+|<http://dbpedia.org/class/yago/Messag...|      14|
+|<http://dbpedia.org/class/yago/Wikica...|       2|
+|<http://dbpedia.org/class/yago/Amide1...|       2|
+|<http://dbpedia.org/class/yago/Wikica...|       1|
+|<http://dbpedia.org/class/yago/Wikica...|       1|
+|<http://dbpedia.org/class/yago/Wikica...|       1|
+|<http://dbpedia.org/class/yago/Wikica...|       3|
+|<http://dbpedia.org/class/yago/Wikica...|       1|
+|<http://dbpedia.org/class/yago/Fundam...|       1|
+|<http://dbpedia.org/class/yago/Halluc...|       5|
+|<http://dbpedia.org/class/yago/Wikica...|       1|
+|<http://dbpedia.org/class/yago/Shape1...|       1|
+|<http://dbpedia.org/class/yago/Agent1...|      41|
+|<http://umbel.org/umbel/rc/ChemicalSu...|      29|
+|<http://dbpedia.org/class/yago/Wikica...|       5|
+|<http://dbpedia.org/ontology/Chemical...|     203|
+|<http://dbpedia.org/class/yago/Organi...|      42|
+|<http://dbpedia.org/class/yago/Nitrob...|       3|
+|<http://dbpedia.org/class/yago/Four11...|       1|
+|<http://dbpedia.org/class/yago/BodySu...|       3|
+|<http://dbpedia.org/class/yago/Alkalo...|       2|
+|<http://dbpedia.org/class/yago/Wikica...|       1|
+|<http://dbpedia.org/class/yago/Wikica...|      26|
+|<http://dbpedia.org/ontology/Biomolec...|       1|
+|<http://dbpedia.org/class/yago/Steroi...|       3|
++----------------------------------------+--------+
+only showing top 40 rows
+
+distribution of subjects with type
++----------------------------------------+--------+
+|                                subject1|count(1)|
++----------------------------------------+--------+
+|  <http://dbpedia.org/resource/25I-NBOH>|       6|
+|<http://dbpedia.org/resource/3-(4-Hyd...|      18|
+|<http://dbpedia.org/resource/4\u0027-...|      20|
+|<http://dbpedia.org/resource/4\u0027-...|      13|
+|<http://dbpedia.org/resource/2CBCB-NB...|       7|
+|<http://dbpedia.org/resource/1,4,6-An...|      24|
+|  <http://dbpedia.org/resource/2C-B-FLY>|      19|
+|<http://dbpedia.org/resource/4,5-MDO-...|       7|
+|<http://dbpedia.org/resource/1-Andros...|       5|
+|<http://dbpedia.org/resource/2,5-Dime...|      19|
+|<http://dbpedia.org/resource/3,4-Meth...|       5|
+|<http://dbpedia.org/resource/3,3-Diet...|      15|
+|<http://dbpedia.org/resource/1-Keto-1...|       5|
+|<http://dbpedia.org/resource/2-Diphen...|      12|
+|<http://dbpedia.org/resource/3-Fluoro...|      15|
+|<http://dbpedia.org/resource/3\u0027-...|       5|
+|<http://dbpedia.org/resource/4,4\u002...|      24|
+|<http://dbpedia.org/resource/(_)-cis-...|       1|
+|<http://dbpedia.org/resource/2-Methox...|      16|
+|<http://dbpedia.org/resource/3,4-Meth...|      17|
+|<http://dbpedia.org/resource/2-Fluoro...|      19|
+|<http://dbpedia.org/resource/1-(3-Chl...|       5|
+|<http://dbpedia.org/resource/4\u0027-...|       5|
+|<http://dbpedia.org/resource/14-Metho...|      23|
+|<http://dbpedia.org/resource/(R)-p-Is...|      29|
+|<http://dbpedia.org/resource/2-Amino-...|      12|
+|<http://dbpedia.org/resource/2-Bromo-...|      17|
+|<http://dbpedia.org/resource/4\u0027-...|       5|
+|<http://dbpedia.org/resource/2\u03B1-...|      21|
+|      <http://dbpedia.org/resource/2C-F>|       6|
+|<http://dbpedia.org/resource/2-Aminot...|      25|
+|<http://dbpedia.org/resource/3-Monoac...|      10|
+|<http://dbpedia.org/resource/1-Methyl...|       5|
+|<http://dbpedia.org/resource/1-Aminom...|      14|
+|<http://dbpedia.org/resource/25CN-NBOMe>|       5|
+|<http://dbpedia.org/resource/34\u03B2...|       1|
+|<http://dbpedia.org/resource/18-Metho...|      23|
+|<http://dbpedia.org/resource/3-Bromoc...|      22|
+|<http://dbpedia.org/resource/3-Methox...|      11|
+|  <http://dbpedia.org/resource/(+)-CPCA>|      29|
++----------------------------------------+--------+
+
+only showing top 40 rows
+
+Number of subjects with no type
++--------+
+|count(1)|
++--------+
+|       0|
++--------+

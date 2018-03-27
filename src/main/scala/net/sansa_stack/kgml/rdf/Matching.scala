@@ -228,6 +228,7 @@ only showing top 15 rows
     */
   def scheduleParentMatching( parentNodesWithLiteral: DataFrame, childSubjectsMatch: DataFrame) : DataFrame = {
 
+
     var matched = getMatchedEntityPairsBasedOnLiteralSim(parentNodesWithLiteral)
     matched = matched.union(childSubjectsMatch)
     //literalBasedClusterRankSubjects = literalBasedClusterRankSubjects(matched).union(literalBasedClusterRankSubjects) //count matched items a new relation, todo:test it in practice. if the predicate is matched it is being counted already

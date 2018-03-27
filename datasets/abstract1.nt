@@ -1,0 +1,7 @@
+<http://www.afshn.com/entity/person1> <http://www.afshn.com/relation/worksFor> <http://www.afshn.com/entity/person2> .
+<http://www.afshn.com/entity/person1> <http://www.afshn.com/relation/livesIn> <http://www.afshn.com/entity/city1> .
+<http://www.afshn.com/entity/person1> <http://www.afshn.com/relation/worksIn> <http://www.afshn.com/entity/city2> .
+<http://www.afshn.com/entity/person2> <http://www.afshn.com/relation/livesIn> <http://www.afshn.com/entity/city2> .
+<http://www.afshn.com/entity/person2> <http://www.afshn.com/relation/worksIn> <http://www.afshn.com/entity/city2> .
+<http://www.afshn.com/entity/person1> <http://www.afshn.com/relation/has#name> "John" .
+<http://www.afshn.com/entity/person2> <http://www.afshn.com/relation/has#name> "Moley" .
