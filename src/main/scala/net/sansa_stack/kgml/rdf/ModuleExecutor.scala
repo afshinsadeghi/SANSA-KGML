@@ -48,12 +48,12 @@ object ModuleExecutor {
       //input3 = "datasets/yagofact50k.nt"
       //input2 = "datasets/dbpediaOnlyAppleobjects.nt"
       //input3 = "datasets/yagoonlyAppleobjects.nt"
-      input2 = "datasets/dbpediaSimple.nt"
-      input3 = "datasets/yagoSimple.nt"
+      //input2 = "datasets/dbpediaSimple.nt"
+      //input3 = "datasets/yagoSimple.nt"
       //input2 = "datasets/drugbank_dump.nt"
       //input3 = "datasets/dbpedia.drugs.nt"
-      //input2 = "datasets/person11.nt" //   894 matched
-      //input3 = "datasets/person12.nt"
+      input2 = "datasets/person11.nt" //   894 matched
+      input3 = "datasets/person12.nt"
     }
     println(input1)
     println(input2)
@@ -69,7 +69,7 @@ object ModuleExecutor {
       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .config("spark.kryoserializer.buffer.max", "1024")
       .config("spark.sql.broadcastTimeout", "1200")
-      .appName("Triple merger of " + input1 + " and " + input2 + " ")
+      .appName("Entity matching for " + input2 + " and " + input3 + " ")
       .getOrCreate()
 
 
@@ -107,8 +107,8 @@ object ModuleExecutor {
     DF2 = DF2.drop(DF2.col("dot"))
 
     // defining schema and removing duplicates
-    val df1 = DF1.toDF("Subject1", "Predicate1", "Object1").dropDuplicates("Subject1", "Predicate1", "Object1")
-    val df2 = DF2.toDF("Subject2", "Predicate2", "Object2").dropDuplicates("Subject2", "Predicate2", "Object2")
+    val df1 = DF1.toDF("Subject1", "Predicate1", "Object1").dropDuplicates("Subject1", "Predicate1", "Object1").persist()
+    val df2 = DF2.toDF("Subject2", "Predicate2", "Object2").dropDuplicates("Subject2", "Predicate2", "Object2").persist()
 
     if (input1 == "PredicatePartitioning") {
       var partitions = new Partitioning(sparkSession.sparkContext)
@@ -171,8 +171,8 @@ object ModuleExecutor {
 
       val matchedEntites = profile {
 
-        val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<")).persist()
-        val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")).persist()
+        val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<"))//.persist()
+        val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<"))//.persist()
         val predicatePairs = blocking.getMatchedPredicates(dfTripleWithLiteral1, dfTripleWithLiteral2)
 
         val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
