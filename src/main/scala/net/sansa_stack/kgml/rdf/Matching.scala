@@ -18,7 +18,7 @@ import scala.reflect.ClassTag
 class Matching(sparkSession: SparkSession, simHandler : SimilarityHandler) extends EvaluationHelper {
 
   val similarityThreshold = 0.7
-  var normedStringSimilarityThreshold = 0.93
+  var normedStringSimilarityThreshold = 0.94
 
   import sparkSession.sqlContext.implicits._
 
@@ -496,7 +496,7 @@ only showing top 15 rows
     normedStringSimilarityThreshold = 0.94
 
     pairedSubjectsWithNormSim.createOrReplaceTempView("pairedSubjects")
-    val sqlText3 = "SELECT Subject1, Subject2, normStrSim FROM pairedSubjects  WHERE Subject1 != normStrSim > " + normedStringSimilarityThreshold
+    val sqlText3 = "SELECT Subject1, Subject2, normStrSim FROM pairedSubjects  WHERE Subject1 != normStrSim > " + normedStringSimilarityThreshold.toString
     val matchedSubjectsWithNormSim = sparkSession.sql(sqlText3)
 
     if (printReport) {
