@@ -496,7 +496,7 @@ only showing top 15 rows
     normedStringSimilarityThreshold = 0.94
 
     pairedSubjectsWithNormSim.createOrReplaceTempView("pairedSubjects")
-    val sqlText3 = "SELECT Subject1, Subject2, normStrSim FROM pairedSubjects  WHERE Subject1 != normStrSim > " + normedStringSimilarityThreshold.toString
+    val sqlText3 = "SELECT Subject1, Subject2, normStrSim FROM pairedSubjects  WHERE Subject1 != object1 AND normStrSim > " + normedStringSimilarityThreshold.toString
     val matchedSubjectsWithNormSim = sparkSession.sql(sqlText3)
 
     if (printReport) {
