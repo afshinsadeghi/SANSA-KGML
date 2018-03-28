@@ -230,7 +230,7 @@ only showing top 15 rows
 
     var matched = getMatchedEntityPairsBasedOnLiteralSim(parentNodesWithLiteral)
     //matched = matched.union(childSubjectsMatch)
-    normedStringSimilarityThreshold = 0.9
+    normedStringSimilarityThreshold = 0.93
     val localLiteralBasedClusterRankSubjects = literalBasedClusterRankSubjects(matched) //count matched items a new relation, todo:test it in practice. if the predicate is matched it is being counted already
     this.aggregateMatchedEntities(matched, localLiteralBasedClusterRankSubjects) //must have old sim value
     matched = matched.filter(col("Subject1") =!= col("Subject2")) //matchedUnion.union
@@ -493,8 +493,10 @@ only showing top 15 rows
     val sqlText2 = "SELECT Subject1, Subject2,  sumStrSimilarity/count normStrSim FROM matchedJoined1" //its Jaccard of children sim as in http://afshn.com/papers/Sadeghi_SCM-KG.pdf
     val pairedSubjectsWithNormSim = sparkSession.sql(sqlText2)
 
+    normedStringSimilarityThreshold = 0.94
+
     pairedSubjectsWithNormSim.createOrReplaceTempView("pairedSubjects")
-    val sqlText3 = "SELECT Subject1, Subject2, normStrSim FROM pairedSubjects  WHERE normStrSim > " + normedStringSimilarityThreshold
+    val sqlText3 = "SELECT Subject1, Subject2, normStrSim FROM pairedSubjects  WHERE Subject1 != normStrSim > " + normedStringSimilarityThreshold
     val matchedSubjectsWithNormSim = sparkSession.sql(sqlText3)
 
     if (printReport) {
