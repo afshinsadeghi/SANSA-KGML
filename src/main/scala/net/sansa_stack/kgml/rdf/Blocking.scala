@@ -11,9 +11,10 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 //to see predicates between them are mostly used, you can do multiple blocking based on getMaxCommonTypes and get ranking of the select
 
-class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
+class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extends EvaluationHelper {
 
-  val simThreshold = 0.7
+  val wordNetPredicateSimThreshold = 0.55
+
   /*
   * get literal value in objects
    */
@@ -124,9 +125,7 @@ class Blocking(sparkSession: SparkSession) extends EvaluationHelper {
 
     //println(predicates.collect().take(20))
 
-
-    val wordNetSim = new SimilarityHandler(simThreshold)
-    wordNetSim.setWordNetThreshold(0.55)
+    wordNetSim.setWordNetThreshold(wordNetPredicateSimThreshold)
     println("WordNet Sim threshold for matching predicates: " + wordNetSim.getWordNetThreshold)
     val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
       wordNetSim.arePredicatesEqual(getURIEnding(x.getString(0)),
@@ -219,7 +218,7 @@ in Persons dataset:
     * @param df2
     * @param matchedPredicates
     */
-  def BlockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): DataFrame = {
+  def blockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): DataFrame = {
 
     //filter triples with literals by sparkssql
     //   val dF1 = df1.
@@ -262,7 +261,7 @@ in Persons dataset:
     // There is also a chance that entities from both kgs
     // refer to same KG using sameAs link.
     typeSubjectWithLiteral.persist()
-    typeSubjectWithLiteral
+
   }
 
   def getSubjectsWithLiteral(samePredicateSubjectObjects: DataFrame): DataFrame = {
@@ -321,7 +320,6 @@ in Persons dataset:
     val dF2 = (df1.select(df1("predicate1")).distinct).crossJoin(df2.select(df2("predicate2")).distinct)
 
 
-    val wordNetSim = new SimilarityHandler(simThreshold)
     val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
       wordNetSim.arePredicatesEqual(getURIEnding(x.getString(0)),
         getURIEnding(x.getString(1)))))

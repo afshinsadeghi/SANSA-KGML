@@ -4,4 +4,5 @@
 <http://www.wiki.com/entity/person4> <http://www.wiki.com/relation/livesIn> <http://www.wiki.com/entity/place2> .
 <http://www.wiki.com/entity/person4> <http://www.wiki.com/relation/worksIn> <http://www.wiki.com/entity/place2> .
 <http://www.wiki.com/entity/person3> <http://www.wiki.com/relation/has#name> "John" .
-
+<http://www.wiki.com/entity/place2> <http://www.wiki.com/relation/has#name> "Bonn" .
+<http://www.wiki.com/entity/place1> <http://www.wiki.com/relation/has#name> "Cologne" .

@@ -15,10 +15,10 @@ import scala.reflect.ClassTag
   * @param sparkSession
   */
 
-class Matching(sparkSession: SparkSession) extends EvaluationHelper {
+class Matching(sparkSession: SparkSession, simHandler : SimilarityHandler) extends EvaluationHelper {
 
   val similarityThreshold = 0.7
-  val simHandler = new SimilarityHandler(similarityThreshold)
+  var normedStringSimilarityThreshold = 0.93
 
   import sparkSession.sqlContext.implicits._
 
@@ -223,18 +223,19 @@ only showing top 15 rows
     * It considers both WordNet match of URIS and children match and performs a Jaccard sim on all Matched and not matched children
     * When we go up one level, we assumed all the children of the parent are already compared.
     * @param parentNodesWithLiteral
-    * @param childSubjectsMatch
     * @return
     */
-  def scheduleParentMatching( parentNodesWithLiteral: DataFrame, childSubjectsMatch: DataFrame) : DataFrame = {
+  def scheduleParentMatching( parentNodesWithLiteral: DataFrame) : DataFrame = {
 
 
     var matched = getMatchedEntityPairsBasedOnLiteralSim(parentNodesWithLiteral)
-    matched = matched.union(childSubjectsMatch)
-    //literalBasedClusterRankSubjects = literalBasedClusterRankSubjects(matched).union(literalBasedClusterRankSubjects) //count matched items a new relation, todo:test it in practice. if the predicate is matched it is being counted already
-    this.aggregateMatchedEntities(matched, literalBasedClusterRankSubjects) //must have old sim value
-    matchedUnion = matchedUnion.union(matched).persist()
-    matchedUnion
+    //matched = matched.union(childSubjectsMatch)
+    normedStringSimilarityThreshold = 0.9
+    val localLiteralBasedClusterRankSubjects = literalBasedClusterRankSubjects(matched) //count matched items a new relation, todo:test it in practice. if the predicate is matched it is being counted already
+    this.aggregateMatchedEntities(matched, localLiteralBasedClusterRankSubjects) //must have old sim value
+    matched = matched.filter(col("Subject1") =!= col("Subject2")) //matchedUnion.union
+    matchedUnion = matchedUnion.union(matched).dropDuplicates("Subject1","Subject2")
+    matchedUnion.persist()
   }
   /**
     *
@@ -446,6 +447,7 @@ only showing top 15 rows
   def getMatchedEntityPairsBasedOnLiteralSim(firstMatchingLevel: DataFrame): DataFrame = {
     // val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(2),
     // simHandler.getSimilarity(x.getString(1), x.getString(3))))
+    simHandler.setThreshold(similarityThreshold)
     val subjectsComparedByLiteral = firstMatchingLevel.where(col("Literal1").isNotNull && col("Literal2").isNotNull)
       .withColumn("strSimilarity", simHandler.getSimilarityUDF(col("Literal1"), col("Literal2")))
     // val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
@@ -484,7 +486,6 @@ only showing top 15 rows
     val matchedSubjectsResult = sparkSession.sql(sqlText1)
 
     val matchedSubjects = matchedSubjectsResult.toDF("Subject3", "Subject4", "sumStrSimilarity")
-    val normedStringSimilarityThreshold = 0.7
 
     val matchedSubjectsJoined = matchedSubjects.join(clusteredSubjects, matchedSubjects("Subject3") ===
       clusteredSubjects("Subject1") && matchedSubjects("Subject4") === clusteredSubjects("Subject2"))

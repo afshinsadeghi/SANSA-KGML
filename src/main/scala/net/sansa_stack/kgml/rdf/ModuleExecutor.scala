@@ -112,6 +112,7 @@ object ModuleExecutor {
     val df1 = DF1.toDF("Subject1", "Predicate1", "Object1").dropDuplicates("Subject1", "Predicate1", "Object1").persist()
     val df2 = DF2.toDF("Subject2", "Predicate2", "Object2").dropDuplicates("Subject2", "Predicate2", "Object2").persist()
 
+    val simThreshold = 0.7
     if (input1 == "PredicatePartitioning") {
       var partitions = new Partitioning(sparkSession.sparkContext)
       partitions.predicatesDFPartitioningByKey(df2, df2)
@@ -122,9 +123,9 @@ object ModuleExecutor {
 
       val typeStats = new net.sansa_stack.kgml.rdf.TypeStats(sparkSession)
       //typeStats.calculateStats(triplesRDD1, triplesRDD2)
-      println("Stats of dataset 1...")
+      println("Stats of data set 1...")
       typeStats.calculateDFStats(df1)
-      println("Stats of dataset 2...")
+      println("Stats of data set 2...")
       val df2 = DF2.toDF("Subject1", "Predicate1", "Object1")
       typeStats.calculateDFStats(df2)
     }
@@ -141,20 +142,25 @@ object ModuleExecutor {
 
 
     if (input1 == "PredicateMatching") {
-      val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
+
+      val simHandler = new SimilarityHandler(simThreshold)
+      val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
+
       profile {
-        blocking.getMatchedPredicates(df1, df2)
+        blocking.getMatchedPredicates( df1, df2)
       }
     }
 
     if (input1 == "BlockSubjectsByTypeAndLiteral") {
 
+      val simHandler = new SimilarityHandler(simThreshold)
+
       val SubjectsWithLiteral = profile {
-        val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
-        val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
+        val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
+        val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
 
         val predicatePairs = blocking.getMatchedPredicates(df1, df2)
-        blocking.BlockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
       }
       SubjectsWithLiteral.show(200, 80)
     }
@@ -168,51 +174,58 @@ object ModuleExecutor {
     // there I should rank predicates to find those that are most repeated in the whole dataset. and make itersect of them
 
     if (input1 == "EntityMatching") {
-      val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession)
-      val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession)
+      val simHandler = new SimilarityHandler(simThreshold)
+      val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
+      val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
       val rExtractor = new net.sansa_stack.kgml.rdf.RelationExtractor
+
       val matchedEntities = profile {
 
-        val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<"))//.persist()
-        val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<"))//.persist()
+        val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<"))
+        //.persist()
+        val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")) //.persist()
 
         //val dfNoLiteral1 = df1.filter(col("object1").startsWith("<"))//.persist()
         //val dfNoLiteral2 = df2.filter(col("object2").startsWith("<"))//.persist()
 
         var predicatePairs = blocking.getMatchedPredicates(dfTripleWithLiteral1, dfTripleWithLiteral2)
 
-        val SubjectsWithLiteral = blocking.BlockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
+        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
         //first level match using leaf literals
         var subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory).persist()
         //val allPredicatePairs = blocking.getMatchedPredicates(df1, df2)
 
         //another method could be filtering those who matched by literals, but we grow the matching network
         var parentNodes1 = rExtractor.getParentEntities(df1, subjectsMatch.select("subject1").toDF("Subject3"))
-        var parentNodes2 = rExtractor.getParentEntities( df2.toDF("Subject1", "Predicate1", "Object1"),
+        var parentNodes2 = rExtractor.getParentEntities(df2.toDF("Subject1", "Predicate1", "Object1"),
           subjectsMatch.select("subject2").toDF("Subject3")).toDF("Subject2", "Predicate2", "Object2")
 
-        predicatePairs= blocking.getMatchedPredicates(parentNodes1,parentNodes2)
-        var parentTriples = blocking.BlockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
+        parentNodes1 = rExtractor.replaceMatched(parentNodes1, subjectsMatch.select("subject1", "subject2")
+          .toDF("Subject3", "Subject4"))
+        predicatePairs = blocking.getMatchedPredicates(parentNodes1, parentNodes2)
+        var parentTriples = blocking.blockSubjectsByTypeAndLiteral(parentNodes1, parentNodes2, predicatePairs)
 
         var counter = 0
-//        subjectsMatch.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities"+ counter.toString)
-        while (!parentTriples.take(1).isEmpty) {
+      //  subjectsMatch.rdd.map(_.toString().replace("[", "").replace("]", "")).saveAsTextFile(input2 + counter.toString)
+        while (counter < 1) {
           counter = counter + 1
           println("In loop to match parents, parents count= " + parentTriples.count())
-          val parentSubjectsMatch = matching.scheduleParentMatching(parentTriples, subjectsMatch)
+          val parentSubjectsMatch = matching.scheduleParentMatching(parentTriples) //, subjectsMatch)
           subjectsMatch = subjectsMatch.union(parentSubjectsMatch)
           parentNodes1 = rExtractor.getParentEntities(df1, subjectsMatch.select("subject1").toDF("Subject3"))
-          parentNodes2 = rExtractor.getParentEntities( df2.toDF("Subject1", "Predicate1", "Object1"),
+          parentNodes2 = rExtractor.getParentEntities(df2.toDF("Subject1", "Predicate1", "Object1"),
             subjectsMatch.select("subject2").toDF("Subject3")).toDF("Subject2", "Predicate2", "Object2")
 
-          predicatePairs= blocking.getMatchedPredicates(parentNodes1,parentNodes2)
-          parentTriples = blocking.BlockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
-          //         subjectsMatch.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities"+ counter.toString)
+          parentNodes1 = rExtractor.replaceMatched(parentNodes1, subjectsMatch.select("subject1", "subject2")
+            .toDF("Subject3", "Subject4"))
+          predicatePairs = blocking.getMatchedPredicates(parentNodes1, parentNodes2)
+          parentTriples = blocking.blockSubjectsByTypeAndLiteral(parentNodes1, parentNodes2, predicatePairs)
+          subjectsMatch.rdd.map(_.toString().replace("[", "").replace("]", "")).saveAsTextFile(input2 + counter.toString)
 
         }
         subjectsMatch
       }
- //     matchedEntities.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities")
+      //     matchedEntities.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities")
       matchedEntities.show(20, 80)
       println("number of matched entities pairs: " + matchedEntities.count.toString)
     }
