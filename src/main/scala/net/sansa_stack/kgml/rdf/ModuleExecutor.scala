@@ -54,8 +54,10 @@ object ModuleExecutor {
       //input3 = "datasets/dbpedia.drugs.nt"
       input2 = "datasets/person11.nt" //   894 matched
       input3 = "datasets/person12.nt"
-      input2 = "datasets/abstract1.nt"
+      input2 = "datasets/abstract1.nt" //test on extracting new relations on iterations
       input3 = "datasets/abstract2.nt"
+      input2 = "datasets/commonPredicatesTest.nt"
+      input3 = "datasets/commonPredicates2Test.nt"
     }
     println(input1)
     println(input2)
