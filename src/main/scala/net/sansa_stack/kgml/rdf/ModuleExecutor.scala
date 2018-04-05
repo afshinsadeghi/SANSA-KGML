@@ -24,6 +24,7 @@ object ModuleExecutor {
   var input1 = "" // the module name
   var input2 = "" // parameters
   var input3 = ""
+  var input4 = "deductRelations" // setting input4 to deductRelations when doing entity matching, it performs an extra step of relation extraction using current relations.
 
   def main(args: Array[String]) = {
     println("running a module...")
@@ -36,7 +37,9 @@ object ModuleExecutor {
       if (args.length > 2) {
         input3 = args(2)
       }
-
+      if (args.length > 3) {
+        input4 = args(3)
+      }
     } else {
       println("module name to run is not set. running with default values:")
 
@@ -58,10 +61,12 @@ object ModuleExecutor {
       input3 = "datasets/abstract2.nt"
       input2 = "datasets/commonPredicatesTest.nt"
       input3 = "datasets/commonPredicates2Test.nt"
+      input4 = "none"
     }
     println(input1)
     println(input2)
     println(input3)
+    println(input4)
     val gb = 1024 * 1024 * 1024
     val runTime = Runtime.getRuntime
     var memory = (runTime.maxMemory / gb).toInt
@@ -149,7 +154,7 @@ object ModuleExecutor {
       val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
 
       profile {
-        blocking.getMatchedPredicates( df1, df2)
+        blocking.getMatchedPredicates(df1, df2)
       }
     }
 
@@ -197,36 +202,39 @@ object ModuleExecutor {
         var subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory).persist()
         //val allPredicatePairs = blocking.getMatchedPredicates(df1, df2)
 
-        //another method could be filtering those who matched by literals, but we grow the matching network
-        var parentNodes1 = rExtractor.getParentEntities(df1, subjectsMatch.select("subject1").toDF("Subject3"))
-        var parentNodes2 = rExtractor.getParentEntities(df2.toDF("Subject1", "Predicate1", "Object1"),
-          subjectsMatch.select("subject2").toDF("Subject3")).toDF("Subject2", "Predicate2", "Object2")
-
-        parentNodes1 = rExtractor.replaceMatched(parentNodes1, subjectsMatch.select("subject1", "subject2")
-          .toDF("Subject3", "Subject4"))
-        predicatePairs = blocking.getMatchedPredicates(parentNodes1, parentNodes2)
-        var parentTriples = blocking.blockSubjectsByTypeAndLiteral(parentNodes1, parentNodes2, predicatePairs)
-
-        var counter = 0
-      //  subjectsMatch.rdd.map(_.toString().replace("[", "").replace("]", "")).saveAsTextFile(input2 + counter.toString)
-        while (counter < 1) {
-          counter = counter + 1
-          println("In loop to match parents, parents count= " + parentTriples.count())
-          val parentSubjectsMatch = matching.scheduleParentMatching(parentTriples) //, subjectsMatch)
-          subjectsMatch = subjectsMatch.union(parentSubjectsMatch)
-          parentNodes1 = rExtractor.getParentEntities(df1, subjectsMatch.select("subject1").toDF("Subject3"))
-          parentNodes2 = rExtractor.getParentEntities(df2.toDF("Subject1", "Predicate1", "Object1"),
+        if (input4 == "deductRelations") {
+          //another method could be filtering those who matched by literals, but we grow the matching network
+          var parentNodes1 = rExtractor.getParentEntities(df1, subjectsMatch.select("subject1").toDF("Subject3"))
+          var parentNodes2 = rExtractor.getParentEntities(df2.toDF("Subject1", "Predicate1", "Object1"),
             subjectsMatch.select("subject2").toDF("Subject3")).toDF("Subject2", "Predicate2", "Object2")
 
           parentNodes1 = rExtractor.replaceMatched(parentNodes1, subjectsMatch.select("subject1", "subject2")
             .toDF("Subject3", "Subject4"))
           predicatePairs = blocking.getMatchedPredicates(parentNodes1, parentNodes2)
-          parentTriples = blocking.blockSubjectsByTypeAndLiteral(parentNodes1, parentNodes2, predicatePairs)
-          subjectsMatch.rdd.map(_.toString().replace("[", "").replace("]", "")).saveAsTextFile(input2 + counter.toString)
+          var parentTriples = blocking.blockSubjectsByTypeAndLiteral(parentNodes1, parentNodes2, predicatePairs)
 
+          var counter = 0
+          //  subjectsMatch.rdd.map(_.toString().replace("[", "").replace("]", "")).saveAsTextFile(input2 + counter.toString)
+          while (counter < 1) {
+            counter = counter + 1
+            println("In loop to match parents, parents count= " + parentTriples.count())
+            val parentSubjectsMatch = matching.scheduleParentMatching(parentTriples) //, subjectsMatch)
+            subjectsMatch = subjectsMatch.union(parentSubjectsMatch)
+            parentNodes1 = rExtractor.getParentEntities(df1, subjectsMatch.select("subject1").toDF("Subject3"))
+            parentNodes2 = rExtractor.getParentEntities(df2.toDF("Subject1", "Predicate1", "Object1"),
+              subjectsMatch.select("subject2").toDF("Subject3")).toDF("Subject2", "Predicate2", "Object2")
+
+            parentNodes1 = rExtractor.replaceMatched(parentNodes1, subjectsMatch.select("subject1", "subject2")
+              .toDF("Subject3", "Subject4"))
+            predicatePairs = blocking.getMatchedPredicates(parentNodes1, parentNodes2)
+            parentTriples = blocking.blockSubjectsByTypeAndLiteral(parentNodes1, parentNodes2, predicatePairs)
+            subjectsMatch.rdd.map(_.toString().replace("[", "").replace("]", "")).saveAsTextFile(input2 + counter.toString)
+
+          }
         }
         subjectsMatch
       }
+
       //     matchedEntities.rdd.map(_.toString().replace("[","").replace("]", "")).saveAsTextFile("../matchedEntities")
       matchedEntities.show(20, 80)
       println("number of matched entities pairs: " + matchedEntities.count.toString)

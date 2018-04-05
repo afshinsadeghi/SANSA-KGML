@@ -455,7 +455,7 @@ only showing top 15 rows
     //   val subjectsComparedByLiteral = rdd1.toDF("Subject1", "Subject2", "strSimilarity")
     if (printReport) {
       println("Number of compared pairs:" + subjectsComparedByLiteral.count())
-      subjectsComparedByLiteral.show(40)
+      subjectsComparedByLiteral.show(40, 80)
     }
     subjectsComparedByLiteral.createOrReplaceTempView("matched")
     val sqlText1 = "SELECT Subject1, Subject2, strSimilarity FROM matched WHERE strSimilarity > " + similarityThreshold.toString
