@@ -323,4 +323,12 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
     //getSimilarity(S, S2)
   })
 
+  val getWordNetSimilarityUDF = udf((S: String, S2: String) => {
+    jaccardLiteralSimilarityWithWordNet(S,S2)
+  })
+
+  val getExactMatchUDF = udf((S: String, S2: String) => {
+    if (checkLowerCaseStringEquality(S,S2)) 1
+    else 0
+  })
 }

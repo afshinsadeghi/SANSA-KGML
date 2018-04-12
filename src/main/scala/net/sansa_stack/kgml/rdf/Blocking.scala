@@ -116,9 +116,6 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
       df2.show(5, 60)
     }
 
-    def wordNetEntityBlocking(df1: DataFrame): DataFrame ={
-      df1
-    }
 
     //Elapsed time: 90.543716752s
     //Elapsed time: 85.588292884s without coalesce(10)

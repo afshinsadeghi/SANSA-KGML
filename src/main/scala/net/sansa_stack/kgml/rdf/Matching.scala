@@ -20,6 +20,7 @@ class Matching(sparkSession: SparkSession, simHandler : SimilarityHandler) exten
   val similarityThreshold = 0.7
   var normedStringSimilarityThreshold = 0.7
 
+
   import sparkSession.sqlContext.implicits._
 
   var matchedUnion = Seq.empty[(String, String, String)].toDF("Subject1", "Subject2", "strSimilarity")
@@ -448,8 +449,23 @@ only showing top 15 rows
     // val similarPairs = firstMatchingLevel.collect().map(x => (x.getString(0), x.getString(2),
     // simHandler.getSimilarity(x.getString(1), x.getString(3))))
     simHandler.setThreshold(similarityThreshold)
-    val subjectsComparedByLiteral = firstMatchingLevel.where(col("Literal1").isNotNull && col("Literal2").isNotNull)
+
+    var subjectsComparedByLiteral  = firstMatchingLevel // just to initialize
+    //wordnet and exact match is just for running experiments.
+    if (wordNetMatchEvaluation){
+       subjectsComparedByLiteral = firstMatchingLevel.where(col("Literal1").isNotNull && col("Literal2").isNotNull)
+        .withColumn("strSimilarity", simHandler.getWordNetSimilarityUDF(col("Literal1"), col("Literal2")))
+
+    }
+    else if(exactMatchEvaluation){
+       subjectsComparedByLiteral = firstMatchingLevel.where(col("Literal1").isNotNull && col("Literal2").isNotNull)
+        .withColumn("strSimilarity", simHandler.getExactMatchUDF(col("Literal1"), col("Literal2")))
+
+    }else{
+       subjectsComparedByLiteral = firstMatchingLevel.where(col("Literal1").isNotNull && col("Literal2").isNotNull)
       .withColumn("strSimilarity", simHandler.getSimilarityUDF(col("Literal1"), col("Literal2")))
+    }
+
     // val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
     //  import sparkSession.sqlContext.implicits._
     //   val subjectsComparedByLiteral = rdd1.toDF("Subject1", "Subject2", "strSimilarity")
