@@ -23,6 +23,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
   var maxLesk = 19
 
 
+  val stemmer = new Stemmer()
   val wn = new WordNet()
 
 
@@ -43,7 +44,8 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
       similarity = 0.0
     } else {
 
-      similarity = getMeanWordNetVerbOrNounSimilarity(string1, string2)
+      similarity = getMeanWordNetVerbOrNounSimilarity(this.getRoot(string1), this.getRoot(string2))
+     // similarity = getMeanWordNetVerbOrNounSimilarity(string1, string2)
       //var similarity = 0.0
     }
 
@@ -174,6 +176,9 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
     ).replaceAll("  ", " ").replaceAll("  ", " ").split(" ")
   }
 
+  def getRoot(s: String): String = {
+    stemmer.apply(s)
+  }
 
   def jaccardPredicateSimilarityWithWordNet(string1: String, string2: String): Double = {
 

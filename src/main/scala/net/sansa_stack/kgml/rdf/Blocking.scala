@@ -108,7 +108,17 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
 
     //val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
     val dF2 = df1.select(df1("predicate1")).distinct.crossJoin(df2.select(df2("predicate2")).distinct)
-    println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
+    if(printReport){
+      println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
+    println("5 lines of the First data-set:")
+      df1.show(5, 60)
+      println("5 lines of the Second data-set:")
+      df2.show(5, 60)
+    }
+
+    def wordNetEntityBlocking(df1: DataFrame): DataFrame ={
+      df1
+    }
 
     //Elapsed time: 90.543716752s
     //Elapsed time: 85.588292884s without coalesce(10)
@@ -253,7 +263,7 @@ in Persons dataset:
 
     val typeSubjectWithLiteral = this.getSubjectsWithLiteral(samePredicateSubjectObjects)
 
-    if (printReport) typeSubjectWithLiteral.show(15, 50)
+    //if (printReport) typeSubjectWithLiteral.show(15, 50)
 
     //The other way round will be comparison of subjects. but if the URI format is hashed based then that is useless.
     // By comparing filtered objects we compare literals as well.
@@ -264,11 +274,19 @@ in Persons dataset:
 
   }
 
+  /**
+    * This function get subjects and literals, it converts URI of objects to literals as well
+    * @param samePredicateSubjectObjects
+    * @return
+    */
   def getSubjectsWithLiteral(samePredicateSubjectObjects: DataFrame): DataFrame = {
     val typeSubjectWithLiteral = samePredicateSubjectObjects.withColumn("Literal1", getComparableValue(col("object1"))).
       withColumn("Literal2", getComparableValue(col("object2"))).where(col("Literal1").isNotNull && col("Literal2").isNotNull)
-      .select("Subject1", "Literal1", "Subject2", "Literal2", "Predicate1", "Predicate2") //Predicates are used in clusterranking subjects
-    //typeSubjectWithLiteral.show(60,40)  //here one subject and predicate can have several different literals
+      .select("Subject1", "Literal1", "Subject2", "Literal2", "Predicate1", "Predicate2") //Predicates are used in cluster-ranking subjects
+    if(printReport){
+      println(" In getSubjectsWithLiteral: here one subject and predicate can have several different literals, also it takes URIs as well")
+      typeSubjectWithLiteral.show(60,40)
+    }
     typeSubjectWithLiteral
   }
 

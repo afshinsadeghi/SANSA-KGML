@@ -55,13 +55,17 @@ object ModuleExecutor {
       //input3 = "datasets/yagoSimple.nt"
       //input2 = "datasets/drugbank_dump.nt"
       //input3 = "datasets/dbpedia.drugs.nt"
-      input2 = "datasets/person11.nt" //   894 matched
-      input3 = "datasets/person12.nt"
-      input2 = "datasets/abstract1.nt" //test on extracting new relations on iterations
-      input3 = "datasets/abstract2.nt"
-      input2 = "datasets/commonPredicatesTest.nt"
-      input3 = "datasets/commonPredicates2Test.nt"
+      //input2 = "datasets/person11.nt" //   894 matched
+      //input3 = "datasets/person12.nt"
+      //input2 = "datasets/abstract1.nt" // To test extracting new relations on iterations:
+      //input3 = "datasets/abstract2.nt" // Correctness condition: person2 and person4 are not matched by literals but their equivalency should be discovered by deduction.
+      //input2 = "datasets/commonPredicatesTest.nt" // To test that only matched subjects are in same blocks:
+      //input3 = "datasets/commonPredicates2Test.nt" // Correctness condition:person1 and car1 are not in any block of 2 common predicates
+      input2 = "datasets/dbpediaMovies.nt"
+      //input3 = "datasets/linkedmdb-2010.nt"
+      input3 = "datasets/yagoMovies.nt"
       input4 = "none"
+
     }
     println(input1)
     println(input2)
@@ -96,7 +100,7 @@ object ModuleExecutor {
     var DF1 = sparkSession.read.format("com.databricks.spark.csv")
       .option("header", "false")
       .option("inferSchema", "false")
-      .option("delimiter", " ")
+      .option("delimiter", "\t")
       .option("comment", "#")
       .option("maxColumns", "4")
       .schema(stringSchema)
@@ -107,7 +111,7 @@ object ModuleExecutor {
       .option("header", "false")
       .option("inferSchema", "false")
       .option("comment", "#")
-      .option("delimiter", " ") // for DBpedia some times it is \t
+      .option("delimiter", "\t") // for DBpedia some times it is \t
       .option("maxColumns", "4")
       .schema(stringSchema)
       .load(input3)
@@ -188,16 +192,16 @@ object ModuleExecutor {
 
       val matchedEntities = profile {
 
-        val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<"))
-        //.persist()
-        val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")) //.persist()
+     //   val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<"))
+
+       // val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")) //.persist()
 
         //val dfNoLiteral1 = df1.filter(col("object1").startsWith("<"))//.persist()
         //val dfNoLiteral2 = df2.filter(col("object2").startsWith("<"))//.persist()
 
-        var predicatePairs = blocking.getMatchedPredicates(dfTripleWithLiteral1, dfTripleWithLiteral2)
+        var predicatePairs = blocking.getMatchedPredicates(df1, df2)
 
-        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(dfTripleWithLiteral1, dfTripleWithLiteral2, predicatePairs)
+        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
         //first level match using leaf literals
         var subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory).persist()
         //val allPredicatePairs = blocking.getMatchedPredicates(df1, df2)
