@@ -29,6 +29,7 @@ object ModuleExecutor {
   var input5 = "" //delimiter2
   var delimiter1 = " "
   var delimiter2 = " "
+
   def main(args: Array[String]) = {
     println("running a module...")
 
@@ -71,15 +72,16 @@ object ModuleExecutor {
       input2 = "datasets/dbpediaMovies.nt"
       //input3 = "datasets/linkedmdb-2010.nt"
       input3 = "datasets/yagoMovies.nt"
-      delimiter1 = " " // delimiter default is space. it can be tab
-      delimiter2 = " " // delimiter default is space. it can be tab
+      input4 = "tab" // delimiter default is space. it can be tab   for dbpedia movies and yago movies,its tab. for person is space
+      input5 = "tab" // delimiter default is space. it can be tab
     }
     println(input1)
-    println(input2)
-    println(input3)
-
-    if (input4 == "tab") this.delimiter1 =  "\t"
-    if (input5 == "tab") this.delimiter2 =  "\t"
+    println("First data set: " + input2)
+    println("Second data set: " + input3)
+    println("delimiter 1: " + input4)
+    println("delimiter 2: " + input5)
+    if (input4 == "tab") this.delimiter1 = "\t"
+    if (input5 == "tab") this.delimiter2 = "\t"
 
     val gb = 1024 * 1024 * 1024
     val runTime = Runtime.getRuntime
@@ -104,6 +106,14 @@ object ModuleExecutor {
       StructField("dot", StringType, true))
     )
 
+    if (!Files.exists(Paths.get(input2))) {
+      println("First input nt dataset does not exist:" + input2)
+      System.exit(1)
+    }
+    if (!Files.exists(Paths.get(input3))) {
+      println("Second input nt dataset does not exist:" + input3)
+      System.exit(1)
+    }
 
     var DF1 = sparkSession.read.format("com.databricks.spark.csv")
       .option("header", "false")
@@ -281,15 +291,15 @@ object ModuleExecutor {
     }
 
     //evaluation of WordNet with exact comparison in matching
-    if (input1 == "WordNetEvaluation1" || input1 == "WordNetEvaluation2" ) {
+    if (input1 == "WordNetEvaluation1" || input1 == "WordNetEvaluation2") {
       val simHandler = new SimilarityHandler(simThreshold)
       val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
 
-      if(input1 == "WordNetEvaluation1"){
+      if (input1 == "WordNetEvaluation1") {
         matching.exactMatchEvaluation = true
         matching.wordNetMatchEvaluation = false
 
-      }else{
+      } else {
         matching.exactMatchEvaluation = false
         matching.wordNetMatchEvaluation = true
       }
@@ -318,7 +328,6 @@ object ModuleExecutor {
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
       }
     }
-
 
 
     if (input1 == "CountSameASLinks") {
