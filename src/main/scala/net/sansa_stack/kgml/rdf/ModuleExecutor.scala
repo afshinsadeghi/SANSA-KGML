@@ -27,8 +27,8 @@ object ModuleExecutor {
   var input3 = ""
   var input4 = "" //delimiter1
   var input5 = "" //delimiter2
-  var delimiter1 = " "
-  var delimiter2 = " "
+  var delimiter1 = "\t"
+  var delimiter2 = "\t"
 
   def main(args: Array[String]) = {
     println("running a module...")
@@ -42,10 +42,10 @@ object ModuleExecutor {
         input3 = args(2)
       }
       if (args.length > 3) {
-        delimiter1 = args(3)
+        input4 = args(3)
       }
       if (args.length > 4) {
-        delimiter2 = args(4)
+        input5 = args(4)
       }
     } else {
       println("module name to run is not set. running with default values:")
@@ -72,16 +72,16 @@ object ModuleExecutor {
       input2 = "datasets/dbpediaMovies.nt"
       //input3 = "datasets/linkedmdb-2010.nt"
       input3 = "datasets/yagoMovies.nt"
-      input4 = "tab" // delimiter default is space. it can be tab   for dbpedia movies and yago movies,its tab. for person is space
-      input5 = "tab" // delimiter default is space. it can be tab
+      input4 = "tab" // delimiter default is tab it can be space.For dbpediaMovies and yagoMovies its tab and for person is space
+      input5 = "tab" // delimiter default is tab. it can be space
     }
     println(input1)
     println("First data set: " + input2)
     println("Second data set: " + input3)
     println("delimiter 1: " + input4)
     println("delimiter 2: " + input5)
-    if (input4 == "tab") this.delimiter1 = "\t"
-    if (input5 == "tab") this.delimiter2 = "\t"
+    if (input4 == "tab") this.delimiter1 = "\t" else this.delimiter1 = " "
+    if (input5 == "tab") this.delimiter2 = "\t" else this.delimiter2 = " "
 
     val gb = 1024 * 1024 * 1024
     val runTime = Runtime.getRuntime
