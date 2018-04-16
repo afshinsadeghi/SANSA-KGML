@@ -13,7 +13,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extends EvaluationHelper {
 
-  val wordNetPredicateSimThreshold = 0.70
+  val wordNetPredicateSimThreshold = 0.65
 
   /*
   * get literal value in objects

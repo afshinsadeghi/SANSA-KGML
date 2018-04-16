@@ -20,7 +20,7 @@ case class StringTriples(Subject: String, Predicate: String, Object: String)
   */
 object ModuleExecutor {
 
-  var predicateMatchesPath = "predicatesMatch.csv"
+  var predicateMatchesPath = "matchedPredicates" // a folder consist of tab separated matched predicates
   var input1 = "" // the module name
   var input2 = "" // parameters
   var input3 = ""
@@ -46,7 +46,7 @@ object ModuleExecutor {
       println("current modules are: PredicateStats,CommonPredicateStats,RankByPredicateType,PredicateMatching,PredicatePartitioning," +
         "BlockSubjectsByTypeAndLiteral,CountSameASLinks,EntityMatching")
 
-      input1 = "EntityMatching"
+      input1 = "EntityMatching" // "EntityMatching" and etc (the list above)
       //input2 = "datasets/dbpediamapping50k.nt"
       //input3 = "datasets/yagofact50k.nt"
       //input2 = "datasets/dbpediaOnlyAppleobjects.nt"
@@ -64,7 +64,7 @@ object ModuleExecutor {
       input2 = "datasets/dbpediaMovies.nt"
       //input3 = "datasets/linkedmdb-2010.nt"
       input3 = "datasets/yagoMovies.nt"
-      input4 = "none"
+      input4 = "none" // can be  "deductRelations"
 
     }
     println(input1)
@@ -100,7 +100,7 @@ object ModuleExecutor {
     var DF1 = sparkSession.read.format("com.databricks.spark.csv")
       .option("header", "false")
       .option("inferSchema", "false")
-      .option("delimiter", "\t")
+      .option("delimiter", " ")
       .option("comment", "#")
       .option("maxColumns", "4")
       .schema(stringSchema)
@@ -111,7 +111,7 @@ object ModuleExecutor {
       .option("header", "false")
       .option("inferSchema", "false")
       .option("comment", "#")
-      .option("delimiter", "\t") // for DBpedia some times it is \t
+      .option("delimiter", " ") // for DBpedia some times it is \t
       .option("maxColumns", "4")
       .schema(stringSchema)
       .load(input3)
@@ -153,16 +153,27 @@ object ModuleExecutor {
 
 
     if (input1 == "PredicateMatching") {
+      if (Files.exists(Paths.get(predicateMatchesPath))) {
+        println("predicate match folder already exists:" + predicateMatchesPath)
+        val predicatePairs = sparkSession.read.format("com.databricks.spark.csv")
+          .option("header", "false")
+          .option("inferSchema", "false")
+          .option("delimiter", "\t")
+          .option("comment", "#")
+          .option("maxColumns", "4")
+          .load(predicateMatchesPath).toDF("predicate1", "predicate2")
+        predicatePairs.show(30, 50)
+      } else {
 
-      val simHandler = new SimilarityHandler(simThreshold)
-      val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
-
-      val predicatePairs = profile {
-        blocking.getMatchedPredicates(df1, df2)
+        val predicatePairs = profile {
+          val simHandler = new SimilarityHandler(simThreshold)
+          val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
+          blocking.getMatchedPredicates(df1, df2)
+        }
+        predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")
+          .option("inferSchema", "false")
+          .option("delimiter", "\t").save(predicateMatchesPath)
       }
-      predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")
-        .option("inferSchema", "false")
-        .option("delimiter", "\t").save(predicateMatchesPath)
     }
 
     if (input1 == "BlockSubjectsByTypeAndLiteral") {
@@ -211,7 +222,7 @@ object ModuleExecutor {
             .option("delimiter", "\t")
             .option("comment", "#")
             .option("maxColumns", "4")
-            .load(predicateMatchesPath)
+            .load(predicateMatchesPath).toDF("predicate1", "predicate2")
         } else {
           predicatePairs = blocking.getMatchedPredicates(df1, df2)
           predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")

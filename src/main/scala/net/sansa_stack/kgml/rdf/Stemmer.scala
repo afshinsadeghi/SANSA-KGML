@@ -1,7 +1,7 @@
 package net.sansa_stack.kgml.rdf
 
 
-class Stemmer {
+class Stemmer  extends Serializable {
 
     /**
       * This is a edited version of Porter stemming
