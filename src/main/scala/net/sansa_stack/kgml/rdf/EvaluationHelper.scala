@@ -21,9 +21,10 @@ trait EvaluationHelper {
     this.printReport = true
   }
 
-  //when not doing experiment on wordnet usage can put both to false to use string distance matching
-  val exactMatchEvaluation = true
-  val wordNetMatchEvaluation = false
+  // This is for evaluation experiment to compare exact match and wordnet based match
+  // put both to false to use string distance matching
+  var exactMatchEvaluation = false
+  var wordNetMatchEvaluation = false
 
   var comparisonCounter = 0
 }

@@ -3,6 +3,7 @@ package net.sansa_stack.kgml.rdf
 import java.net.URI
 import java.nio.file.{Files, Paths}
 
+import net.sansa_stack.kgml.rdf.ModuleExecutor.profile
 import net.sansa_stack.rdf.spark.io.NTripleReader
 import org.apache.spark
 import org.apache.spark.sql.{DataFrame, Dataset}
@@ -273,6 +274,45 @@ object ModuleExecutor {
       matchedEntities.show(20, 80)
       println("number of matched entities pairs: " + matchedEntities.count.toString)
     }
+
+    if (input1 == "WordNetEvaluation1" || input1 == "WordNetEvaluation2" ) {
+      val simHandler = new SimilarityHandler(simThreshold)
+      val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
+
+      if(input1 == "WordNetEvaluation1"){
+        matching.exactMatchEvaluation = true
+        matching.wordNetMatchEvaluation = false
+
+      }else{
+        matching.exactMatchEvaluation = false
+        matching.wordNetMatchEvaluation = true
+      }
+
+      val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
+      val rExtractor = new net.sansa_stack.kgml.rdf.RelationExtractor
+
+      val matchedEntities = profile {
+
+        import sparkSession.implicits._
+        var predicatePairs = Seq.empty[(String, String)].toDF("predicate1", "predicate2") // matched Predicate Pairs, to initialize
+        if (Files.exists(Paths.get(predicateMatchesPath))) {
+          predicatePairs = sparkSession.read.format("com.databricks.spark.csv")
+            .option("header", "false")
+            .option("inferSchema", "false")
+            .option("delimiter", "\t")
+            .option("comment", "#")
+            .option("maxColumns", "4")
+            .load(predicateMatchesPath).toDF("predicate1", "predicate2")
+        } else {
+          predicatePairs = blocking.getMatchedPredicates(df1, df2)
+          predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")
+            .option("inferSchema", "false")
+            .option("delimiter", "\t").save(predicateMatchesPath)
+        }
+        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+      }
+    }
+
 
 
     if (input1 == "CountSameASLinks") {
