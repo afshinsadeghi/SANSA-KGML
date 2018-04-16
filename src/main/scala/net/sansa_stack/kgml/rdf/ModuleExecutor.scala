@@ -275,6 +275,7 @@ object ModuleExecutor {
       println("number of matched entities pairs: " + matchedEntities.count.toString)
     }
 
+    //evaluation of WordNet with exact comparison in matching
     if (input1 == "WordNetEvaluation1" || input1 == "WordNetEvaluation2" ) {
       val simHandler = new SimilarityHandler(simThreshold)
       val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
