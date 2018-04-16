@@ -21,7 +21,6 @@ case class StringTriples(Subject: String, Predicate: String, Object: String)
 object ModuleExecutor {
 
   var predicateMatchesPath = "predicatesMatch.csv"
-  var predicatePairs: DataFrame // matched Predicate Pairs
   var input1 = "" // the module name
   var input2 = "" // parameters
   var input3 = ""
@@ -161,8 +160,9 @@ object ModuleExecutor {
       val predicatePairs = profile {
         blocking.getMatchedPredicates(df1, df2)
       }
-      predicatePairs.write.format("com.databricks.spark.csv").save(predicateMatchesPath)
-
+      predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")
+        .option("inferSchema", "false")
+        .option("delimiter", "\t").save(predicateMatchesPath)
     }
 
     if (input1 == "BlockSubjectsByTypeAndLiteral") {
@@ -202,6 +202,8 @@ object ModuleExecutor {
         //val dfNoLiteral1 = df1.filter(col("object1").startsWith("<"))//.persist()
         //val dfNoLiteral2 = df2.filter(col("object2").startsWith("<"))//.persist()
 
+        import sparkSession.implicits._
+        var predicatePairs = Seq.empty[(String, String)].toDF("predicate1", "predicate2") // matched Predicate Pairs, to initialize
         if (Files.exists(Paths.get(predicateMatchesPath))) {
           predicatePairs = sparkSession.read.format("com.databricks.spark.csv")
             .option("header", "false")
@@ -209,11 +211,12 @@ object ModuleExecutor {
             .option("delimiter", "\t")
             .option("comment", "#")
             .option("maxColumns", "4")
-            .schema(stringSchema)
             .load(predicateMatchesPath)
         } else {
           predicatePairs = blocking.getMatchedPredicates(df1, df2)
-          predicatePairs.write.format("com.databricks.spark.csv").save(predicateMatchesPath)
+          predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")
+            .option("inferSchema", "false")
+            .option("delimiter", "\t").save(predicateMatchesPath)
         }
 
 
