@@ -25,8 +25,10 @@ object ModuleExecutor {
   var input1 = "" // the module name
   var input2 = "" // parameters
   var input3 = ""
-  var input4 = "deductRelations" // setting input4 to deductRelations when doing entity matching, it performs an extra step of relation extraction using current relations.
-
+  var input4 = "" //delimiter1
+  var input5 = "" //delimiter2
+  var delimiter1 = " "
+  var delimiter2 = " "
   def main(args: Array[String]) = {
     println("running a module...")
 
@@ -39,15 +41,19 @@ object ModuleExecutor {
         input3 = args(2)
       }
       if (args.length > 3) {
-        input4 = args(3)
+        delimiter1 = args(3)
+      }
+      if (args.length > 4) {
+        delimiter2 = args(4)
       }
     } else {
       println("module name to run is not set. running with default values:")
 
       println("current modules are: PredicateStats,CommonPredicateStats,RankByPredicateType,PredicateMatching,PredicatePartitioning," +
-        "BlockSubjectsByTypeAndLiteral,CountSameASLinks,EntityMatching")
-
+        "BlockSubjectsByTypeAndLiteral,CountSameASLinks,EntityMatching", "deductRelations")
+      // setting input1 to deductRelations when doing entity matching, it performs an extra step of relation extraction using current relations.
       input1 = "EntityMatching" // "EntityMatching" and etc (the list above)
+
       //input2 = "datasets/dbpediamapping50k.nt"
       //input3 = "datasets/yagofact50k.nt"
       //input2 = "datasets/dbpediaOnlyAppleobjects.nt"
@@ -65,13 +71,16 @@ object ModuleExecutor {
       input2 = "datasets/dbpediaMovies.nt"
       //input3 = "datasets/linkedmdb-2010.nt"
       input3 = "datasets/yagoMovies.nt"
-      input4 = "none" // can be  "deductRelations"
-
+      delimiter1 = " " // delimiter default is space. it can be tab
+      delimiter2 = " " // delimiter default is space. it can be tab
     }
     println(input1)
     println(input2)
     println(input3)
-    println(input4)
+
+    if (input4 == "tab") this.delimiter1 =  "\t"
+    if (input5 == "tab") this.delimiter2 =  "\t"
+
     val gb = 1024 * 1024 * 1024
     val runTime = Runtime.getRuntime
     var memory = (runTime.maxMemory / gb).toInt
@@ -86,9 +95,7 @@ object ModuleExecutor {
       .appName("Entity matching for " + input2 + " and " + input3 + " ")
       .getOrCreate()
 
-
     //val triplesRDD1 = NTripleReader.load(sparkSession, URI.create(input2)) // RDD[Triple]
-
 
     val stringSchema = StructType(Array(
       StructField("Subject", StringType, true),
@@ -101,7 +108,7 @@ object ModuleExecutor {
     var DF1 = sparkSession.read.format("com.databricks.spark.csv")
       .option("header", "false")
       .option("inferSchema", "false")
-      .option("delimiter", " ")
+      .option("delimiter", delimiter1)
       .option("comment", "#")
       .option("maxColumns", "4")
       .schema(stringSchema)
@@ -112,7 +119,7 @@ object ModuleExecutor {
       .option("header", "false")
       .option("inferSchema", "false")
       .option("comment", "#")
-      .option("delimiter", " ") // for DBpedia some times it is \t
+      .option("delimiter", delimiter2) // for DBpedia some times it is \t
       .option("maxColumns", "4")
       .schema(stringSchema)
       .load(input3)
@@ -129,7 +136,6 @@ object ModuleExecutor {
       var partitions = new Partitioning(sparkSession.sparkContext)
       partitions.predicatesDFPartitioningByKey(df2, df2)
     }
-
 
     if (input1 == "PredicateStats") {
 
@@ -199,7 +205,7 @@ object ModuleExecutor {
     // in kg ontology is varient, for example common predicate is good for Person dataset but not debpida
     // there I should rank predicates to find those that are most repeated in the whole dataset. and make itersect of them
 
-    if (input1 == "EntityMatching") {
+    if (input1 == "EntityMatching" || input1 == "deductRelations") {
       val simHandler = new SimilarityHandler(simThreshold)
       val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
       val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
@@ -231,13 +237,12 @@ object ModuleExecutor {
             .option("delimiter", "\t").save(predicateMatchesPath)
         }
 
-
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
         //first level match using leaf literals
         var subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory).persist()
         //val allPredicatePairs = blocking.getMatchedPredicates(df1, df2)
 
-        if (input4 == "deductRelations") {
+        if (input1 == "deductRelations") {
           //another method could be filtering those who matched by literals, but we grow the matching network
           var parentNodes1 = rExtractor.getParentEntities(df1, subjectsMatch.select("subject1").toDF("Subject3"))
           var parentNodes2 = rExtractor.getParentEntities(df2.toDF("Subject1", "Predicate1", "Object1"),
