@@ -1,18 +1,17 @@
 package net.sansa_stack.kgml.rdf
 
 import java.net.URI
+import java.nio.file.{Files, Paths}
 
 import net.sansa_stack.rdf.spark.io.NTripleReader
 import org.apache.spark
 import org.apache.spark.sql.{DataFrame, Dataset}
-
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.Dataset
 
 case class StringTriples(Subject: String, Predicate: String, Object: String)
 
@@ -21,6 +20,8 @@ case class StringTriples(Subject: String, Predicate: String, Object: String)
   */
 object ModuleExecutor {
 
+  var predicateMatchesPath = "predicatesMatch.csv"
+  var predicatePairs: DataFrame // matched Predicate Pairs
   var input1 = "" // the module name
   var input2 = "" // parameters
   var input3 = ""
@@ -157,9 +158,11 @@ object ModuleExecutor {
       val simHandler = new SimilarityHandler(simThreshold)
       val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
 
-      profile {
+      val predicatePairs = profile {
         blocking.getMatchedPredicates(df1, df2)
       }
+      predicatePairs.write.format("com.databricks.spark.csv").save(predicateMatchesPath)
+
     }
 
     if (input1 == "BlockSubjectsByTypeAndLiteral") {
@@ -192,14 +195,27 @@ object ModuleExecutor {
 
       val matchedEntities = profile {
 
-     //   val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<"))
+        //   val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<"))
 
-       // val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")) //.persist()
+        // val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")) //.persist()
 
         //val dfNoLiteral1 = df1.filter(col("object1").startsWith("<"))//.persist()
         //val dfNoLiteral2 = df2.filter(col("object2").startsWith("<"))//.persist()
 
-        var predicatePairs = blocking.getMatchedPredicates(df1, df2)
+        if (Files.exists(Paths.get(predicateMatchesPath))) {
+          predicatePairs = sparkSession.read.format("com.databricks.spark.csv")
+            .option("header", "false")
+            .option("inferSchema", "false")
+            .option("delimiter", "\t")
+            .option("comment", "#")
+            .option("maxColumns", "4")
+            .schema(stringSchema)
+            .load(predicateMatchesPath)
+        } else {
+          predicatePairs = blocking.getMatchedPredicates(df1, df2)
+          predicatePairs.write.format("com.databricks.spark.csv").save(predicateMatchesPath)
+        }
+
 
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
         //first level match using leaf literals
