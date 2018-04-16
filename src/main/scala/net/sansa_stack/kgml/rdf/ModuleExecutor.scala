@@ -326,7 +326,14 @@ object ModuleExecutor {
             .option("delimiter", "\t").save(predicateMatchesPath)
         }
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        val subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory)
+        subjectsMatch
       }
+      println("numbrt of matched entities " + matchedEntities.count())
+
+      matchedEntities.write.format("com.databricks.spark.csv").option("header", "false")
+        .option("inferSchema", "false")
+        .option("delimiter", "\t").save(input1)
     }
 
 
