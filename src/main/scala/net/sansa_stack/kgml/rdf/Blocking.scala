@@ -267,8 +267,12 @@ in Persons dataset:
     // We cover two cases, when ids are embedded into URI and not literals, as in case of Drug bank data set
     // There is also a chance that entities from both kgs
     // refer to same KG using sameAs link.
-    typeSubjectWithLiteral.persist()
+    //typeSubjectWithLiteral.persist()
 
+    val cores = Runtime.getRuntime.availableProcessors
+    //setting partitions based on  number of cores:  we recommend 2-3 tasks per CPU core in your cluster.
+    // From https://spark.apache.org/docs/latest/tuning.html
+    typeSubjectWithLiteral.repartition(cores * 3)
   }
 
   /**

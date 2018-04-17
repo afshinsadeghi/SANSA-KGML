@@ -33,6 +33,8 @@ object ModuleExecutor {
   def main(args: Array[String]) = {
     println("running a module...")
 
+    //val cores = Runtime.getRuntime.availableProcessors
+    //println("number of available cores:" + cores) I used number of cores in repartitioning
     if (args.headOption.isDefined) {
       input1 = args(0)
       if (args.length > 1) {
