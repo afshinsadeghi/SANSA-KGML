@@ -154,8 +154,7 @@ class Stemmer  extends Serializable {
             //println("hereX")
             replaceSuffix(w, "ent", "")
           }
-          case 'o' => replaceSuffix(w, "ion", "").filter(a => a._1.endsWith("t") || a._1.endsWith("s")).
-            orElse(replaceSuffix(w, "ou", ""))
+          case 'o' => replaceSuffix(w, "ion", "").filter(a => a._1.endsWith("t") || a._1.endsWith("s"))
           case 's' => replaceSuffix(w, "ism", "")
           case 't' => replaceSuffix(w, "ate", "").orElse(replaceSuffix(w, "iti", ""))
           case 'u' => replaceSuffix(w, "ous", "")
