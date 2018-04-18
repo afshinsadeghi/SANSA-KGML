@@ -27,8 +27,10 @@ object ModuleExecutor {
   var input3 = ""
   var input4 = "" //delimiter1
   var input5 = "" //delimiter2
+  var input6 = ""
   var delimiter1 = "\t"
   var delimiter2 = "\t"
+  var printResults = false
 
   def main(args: Array[String]) = {
     println("running a module...")
@@ -36,24 +38,33 @@ object ModuleExecutor {
     //val cores = Runtime.getRuntime.availableProcessors
     //println("number of available cores:" + cores) I used number of cores in repartitioning
     if (args.headOption.isDefined) {
-      input1 = args(0)
+      input1 = args(0)        // Module name to run
       if (args.length > 1) {
-        input2 = args(1)
+        input2 = args(1)    //First data set path
       }
       if (args.length > 2) {
-        input3 = args(2)
+        input3 = args(2)      //Second  data set path
       }
       if (args.length > 3) {
-        input4 = args(3)
+        input4 = args(3)      //Column delimiter in the first data set
       }
       if (args.length > 4) {
-        input5 = args(4)
+        input5 = args(4)    //Column delimiter in the second data set
+      }
+      if (args.length > 5) {
+        input6 = args(5)     //If set to "show" the reporting during execution is shown
       }
     } else {
+      println("How to run: --class net.sansa_stack.kgml.rdf.ModuleExecutor input0 input1 input2 input3 input4 input5")
+      println("input0: Module name to run")
+      println("input1: First data set path")
+      println("input2: Second  data set path")
+      println("input3: Column delimiter in the first data set")
+      println("input4: Column delimiter in the second data set")
+      println("input5: If set to \\\"show\\\" the reporting during execution is shown")
       println("module name to run is not set. running with default values:")
-
       println("current modules are: PredicateStats,CommonPredicateStats,RankByPredicateType,PredicateMatching,PredicatePartitioning," +
-        "BlockSubjectsByTypeAndLiteral,CountSameASLinks,EntityMatching", "deductRelations")
+        "BlockSubjectsByTypeAndLiteral,CountSameASLinks,EntityMatching", "deductRelations", "WordNetEvaluation1", "WordNetEvaluation2")
       // setting input1 to deductRelations when doing entity matching, it performs an extra step of relation extraction using current relations.
       input1 = "EntityMatching" // "EntityMatching" and etc (the list above)
 
@@ -76,6 +87,7 @@ object ModuleExecutor {
       input3 = "datasets/yagoMovies.nt"
       input4 = "tab" // delimiter default is tab it can be space.For dbpediaMovies and yagoMovies its tab and for person is space
       input5 = "tab" // delimiter default is tab. it can be space
+      input6 = ""
     }
     println(input1)
     println("First data set: " + input2)
@@ -84,6 +96,7 @@ object ModuleExecutor {
     println("delimiter 2: " + input5)
     if (input4 == "tab") this.delimiter1 = "\t" else this.delimiter1 = " "
     if (input5 == "tab") this.delimiter2 = "\t" else this.delimiter2 = " "
+    if(input6 == "show") this.printResults = true
 
     val gb = 1024 * 1024 * 1024
     val runTime = Runtime.getRuntime
@@ -203,6 +216,8 @@ object ModuleExecutor {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
         val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
 
+        blocking.printReport = this.printResults
+
         val predicatePairs = blocking.getMatchedPredicates(df1, df2)
         blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
       }
@@ -223,6 +238,8 @@ object ModuleExecutor {
       val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
       val rExtractor = new net.sansa_stack.kgml.rdf.RelationExtractor
 
+      matching.printReport = this.printResults
+      blocking.printReport = this.printResults
       val matchedEntities = profile {
 
         //   val dfTripleWithLiteral1 = df1.filter(!col("object1").startsWith("<"))
@@ -297,6 +314,8 @@ object ModuleExecutor {
       val simHandler = new SimilarityHandler(simThreshold)
       val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
 
+      matching.printReport = this.printResults
+
       if (input1 == "WordNetEvaluation1") {
         matching.exactMatchEvaluation = true
         matching.wordNetMatchEvaluation = false
@@ -307,6 +326,7 @@ object ModuleExecutor {
       }
 
       val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
+      blocking.printReport = this.printResults
       val rExtractor = new net.sansa_stack.kgml.rdf.RelationExtractor
 
       val matchedEntities = profile {
