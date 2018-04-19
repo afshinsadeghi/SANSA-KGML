@@ -180,8 +180,20 @@ object ModuleExecutor {
 
         blocking.printReport = this.printResults
 
-        val predicatePairs = blocking.getMatchedPredicates(df1, df2)
-        blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        if (!Files.exists(Paths.get(predicateMatchesPath))) {
+          println("predicate pairs does not exist, run the module PredicateMatching first to create the match table,then try again.")
+          System.exit(1)
+        }
+        println("predicate match folder already exists:" + predicateMatchesPath)
+        val predicatePairs = sparkSession.read.format("com.databricks.spark.csv")
+          .option("header", "false")
+          .option("inferSchema", "false")
+          .option("delimiter", "\t")
+          .option("comment", "#")
+          .option("maxColumns", "4")
+          .load(predicateMatchesPath).toDF("predicate1", "predicate2")
+        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        SubjectsWithLiteral
       }
       SubjectsWithLiteral.show(200, 80)
     }
