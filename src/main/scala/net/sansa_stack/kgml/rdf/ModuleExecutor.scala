@@ -38,21 +38,21 @@ object ModuleExecutor {
     //val cores = Runtime.getRuntime.availableProcessors
     //println("number of available cores:" + cores) I used number of cores in repartitioning
     if (args.headOption.isDefined) {
-      input1 = args(0)        // Module name to run
+      input1 = args(0) // Module name to run
       if (args.length > 1) {
-        input2 = args(1)    //First data set path
+        input2 = args(1) //First data set path
       }
       if (args.length > 2) {
-        input3 = args(2)      //Second  data set path
+        input3 = args(2) //Second  data set path
       }
       if (args.length > 3) {
-        input4 = args(3)      //Column delimiter in the first data set
+        input4 = args(3) //Column delimiter in the first data set
       }
       if (args.length > 4) {
-        input5 = args(4)    //Column delimiter in the second data set
+        input5 = args(4) //Column delimiter in the second data set
       }
       if (args.length > 5) {
-        input6 = args(5)     //If set to "show" the reporting during execution is shown
+        input6 = args(5) //If set to "show" the reporting during execution is shown
       }
     } else {
       println("How to run: --class net.sansa_stack.kgml.rdf.ModuleExecutor input0 input1 input2 input3 input4 input5")
@@ -96,7 +96,7 @@ object ModuleExecutor {
     println("delimiter 2: " + input5)
     if (input4 == "tab") this.delimiter1 = "\t" else this.delimiter1 = " "
     if (input5 == "tab") this.delimiter2 = "\t" else this.delimiter2 = " "
-    if(input6 == "show") this.printResults = true
+    if (input6 == "show") this.printResults = true
 
     val gb = 1024 * 1024 * 1024
     val runTime = Runtime.getRuntime
@@ -114,47 +114,9 @@ object ModuleExecutor {
 
     //val triplesRDD1 = NTripleReader.load(sparkSession, URI.create(input2)) // RDD[Triple]
 
-    val stringSchema = StructType(Array(
-      StructField("Subject", StringType, true),
-      StructField("Predicate", StringType, true),
-      StructField("Object", StringType, true),
-      StructField("dot", StringType, true))
-    )
-
-    if (!Files.exists(Paths.get(input2))) {
-      println("First input nt dataset does not exist:" + input2)
-      System.exit(1)
-    }
-    if (!Files.exists(Paths.get(input3))) {
-      println("Second input nt dataset does not exist:" + input3)
-      System.exit(1)
-    }
-
-    var DF1 = sparkSession.read.format("com.databricks.spark.csv")
-      .option("header", "false")
-      .option("inferSchema", "false")
-      .option("delimiter", delimiter1)
-      .option("comment", "#")
-      .option("maxColumns", "4")
-      .schema(stringSchema)
-      .load(input2)
-
-
-    var DF2 = sparkSession.read.format("com.databricks.spark.csv")
-      .option("header", "false")
-      .option("inferSchema", "false")
-      .option("comment", "#")
-      .option("delimiter", delimiter2) // for DBpedia some times it is \t
-      .option("maxColumns", "4")
-      .schema(stringSchema)
-      .load(input3)
-
-    DF1 = DF1.drop(DF1.col("dot"))
-    DF2 = DF2.drop(DF2.col("dot"))
-
-    // defining schema and removing duplicates
-    val df1 = DF1.toDF("Subject1", "Predicate1", "Object1").dropDuplicates("Subject1", "Predicate1", "Object1").persist()
-    val df2 = DF2.toDF("Subject2", "Predicate2", "Object2").dropDuplicates("Subject2", "Predicate2", "Object2").persist()
+    val dataReader = new ReadDataSet
+    var df1 = dataReader.load(sparkSession, input2, delimiter1).toDF("Subject1", "Predicate1", "Object1")
+    var df2 = dataReader.load(sparkSession, input3, delimiter2).toDF("Subject2", "Predicate2", "Object2")
 
     val simThreshold = 0.7
     if (input1 == "PredicatePartitioning") {
@@ -169,7 +131,7 @@ object ModuleExecutor {
       println("Stats of data set 1...")
       typeStats.calculateDFStats(df1)
       println("Stats of data set 2...")
-      val df2 = DF2.toDF("Subject1", "Predicate1", "Object1")
+       df2 = df2.toDF("Subject1", "Predicate1", "Object1")
       typeStats.calculateDFStats(df2)
     }
 
@@ -351,7 +313,7 @@ object ModuleExecutor {
         val subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory)
         subjectsMatch
       }
-      println("numbrt of matched entities " + matchedEntities.count())
+      println("number of matched entities " + matchedEntities.count())
 
       matchedEntities.write.format("com.databricks.spark.csv").option("header", "false")
         .option("inferSchema", "false")

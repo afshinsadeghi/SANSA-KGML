@@ -26,6 +26,17 @@ object TestWordNetSimilarityMeasures {
     //    val car   = wn.synset("weak"    , POS.ADJECTIVE, 1)
     //    val bus   = wn.synset("physical", POS.ADJECTIVE, 1)
 
+    Console.println(dog)
+    Console.println(wn.getWS4jConcept(dog))
+    Console.println(cat)
+    Console.println(wn.getWS4jConcept(cat))
+    val animal = wn.synset("animal", POS.NOUN, 1)
+    Console.println(animal)
+    Console.println(wn.getWS4jConcept(animal))
+    Console.println(">>> path_similarity(animal cat)"+ wn.pathSimilarity(animal, cat))
+
+
+
     Console.println(">>> dog.path_similarity(cat)")
     val dogCatPathSimilarity = wn.pathSimilarity(dog, cat)
     Console.println(dogCatPathSimilarity)
