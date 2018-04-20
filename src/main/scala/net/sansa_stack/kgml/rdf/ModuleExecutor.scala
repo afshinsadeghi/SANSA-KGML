@@ -109,7 +109,7 @@ object ModuleExecutor {
       .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .config("spark.kryoserializer.buffer.max", "1024")
       .config("spark.sql.broadcastTimeout", "1200")
-      .config("spark.driver.maxResultSize", "3g")
+      //.config("spark.driver.maxResultSize", "3g") set in input command line instead: --conf spark.driver.maxResultSize=6g
       .appName("Entity matching for " + input2 + " and " + input3 + " ")
       .getOrCreate()
 
