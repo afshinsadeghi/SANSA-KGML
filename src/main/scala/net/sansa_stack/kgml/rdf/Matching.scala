@@ -475,7 +475,7 @@ only showing top 15 rows
     }
     subjectsComparedByLiteral.createOrReplaceTempView("matched")
     val sqlText1 = "SELECT Subject1, Subject2, strSimilarity FROM matched WHERE strSimilarity > " + similarityThreshold.toString
-    val matchedSubjects = sparkSession.sql(sqlText1).persist()
+    val matchedSubjects = sparkSession.sql(sqlText1) //.persist()
     if (printReport) {
       matchedSubjects.show(50, 80)
       println("the number of matched pair of subjects that are paired by matched predicate and matched literals")

@@ -132,6 +132,7 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
 
     wordNetSim.setWordNetThreshold(wordNetPredicateSimThreshold)
     println("WordNet Sim threshold for matching predicates: " + wordNetSim.getWordNetThreshold)
+/* replacing collect
     val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
       wordNetSim.arePredicatesEqual(getURIEnding(x.getString(0)),
         getURIEnding(x.getString(1)))))
@@ -149,12 +150,18 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
     matched.createOrReplaceTempView("triple1")
     val sqlText2 = "SELECT predicate1, predicate2 FROM triple1 where equal = true"
     val predicates = sparkSession.sql(sqlText2)
+*/
+val similarPairs =  dF2.withColumn("prdSimilarity", wordNetSim.getPredicateWordNetSimilarityUDF(col("predicate1"), col("predicate2")))
+
+    similarPairs.createOrReplaceTempView("matched")
+    val sqlText1 = "SELECT predicate1, predicate2, prdSimilarity FROM matched WHERE prdSimilarity > " + wordNetPredicateSimThreshold.toString
+    val predicates = sparkSession.sql(sqlText1)//.drop("prdSimilarity")
 
     if (printReport) {
-      println("Matched predictes in this step:")
+      println("Matched predicates in this step:")
       predicates.show(50, 80)
 
-      println("Numbre of Matched predictes is :" + predicates.count())
+      println("Number of Matched predicates is :" + predicates.count())
     }
     /*
 
@@ -258,22 +265,10 @@ in Persons dataset:
 
     //println(predicates.collect().take(20))
 
-    val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
-      getURIEnding(x.getString(0)) == getURIEnding(x.getString(1))))
-
-
-    val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
-    import sparkSession.sqlContext.implicits._
-    val matched = rdd1.toDF("predicate1", "predicate2", "equal")
-    //println("matched predicates:")
-    //matched.show(40)
-    //Elapsed time: 92.068153666s
-    //Elapsed time: 103.122292326s with using cache
-    //println("number of partitions for matched predicates = " + matched.rdd.partitions.size)
-
-    matched.createOrReplaceTempView("triple1")
-    val sqlText2 = "SELECT predicate1, predicate2 FROM triple1 where equal = true"
-    val predicates = sparkSession.sql(sqlText2)
+     //val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
+      //getURIEnding(x.getString(0)) == getURIEnding(x.getString(1))))
+    //replacing collect :
+    val predicates = dF2.where(dF2.col("predicate1") === dF2.col("predicate2"))
 
     if (printReport) {
       println("Matched predictes in this step:")
