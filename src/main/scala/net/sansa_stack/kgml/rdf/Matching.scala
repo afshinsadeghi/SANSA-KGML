@@ -257,8 +257,8 @@ only showing top 15 rows
 */
     subjectWithLiteral = typeSubjectWithLiteral.drop("Predicate1", "Predicate2")
     val clusteredSubjects = this.predicateBasedClusterRankSubjects(typeSubjectWithLiteral)
-    val clusterRankedCounts = this.clusterRankCounts(clusteredSubjects)
-
+    val cores = Runtime.getRuntime.availableProcessors
+    val clusterRankedCounts = this.clusterRankCounts(clusteredSubjects).repartition(cores * 3)
     val clusters = clusteredSubjects.toDF("Subject4", "Subject5", "commonPredicateCount")
 
     val numberOfSameCommonTriples = clusterRankedCounts.select("CommonPredicates", "comparisonsRequired")

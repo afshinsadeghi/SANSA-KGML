@@ -155,7 +155,7 @@ val similarPairs =  dF2.withColumn("prdSimilarity", wordNetSim.getPredicateWordN
 
     similarPairs.createOrReplaceTempView("matched")
     val sqlText1 = "SELECT predicate1, predicate2, prdSimilarity FROM matched WHERE prdSimilarity > " + wordNetPredicateSimThreshold.toString
-    val predicates = sparkSession.sql(sqlText1)//.drop("prdSimilarity")
+    val predicates = sparkSession.sql(sqlText1).drop("prdSimilarity")
 
     if (printReport) {
       println("Matched predicates in this step:")
