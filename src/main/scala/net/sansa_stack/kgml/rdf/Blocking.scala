@@ -232,44 +232,14 @@ in Persons dataset:
     */
   def getEqualPredicates(df1: DataFrame, df2: DataFrame): DataFrame = {
 
-    //1. First filter all predicates in one column dataframes A and B, I expect all fit into memory
-    //2. make a cartesian comparison of all them.
-    //df1.show(20, 80)
-    //df2.show(20,80)
-    //val dF1 = df1.select(df1("predicate1")).distinct.coalesce(5).persist()
-    //  .withColumn("predicate_ending", getLastPartOfURI(col("object1")))
-
-    //val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
-    val dF2 = df1.select(df1("predicate1")).distinct.crossJoin(df2.select(df2("predicate2")).distinct)
+    val predicates = df1.select("predicate1").distinct.join(df2.select("predicate2").distinct, df1("predicate1") === df2("predicate2"))
     if (printReport) {
-      println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
+      println("number of partitions after join = " + predicates.rdd.partitions.size) //200 partition
       println("5 lines of the First data-set:")
       df1.show(5, 60)
       println("5 lines of the Second data-set:")
       df2.show(5, 60)
     }
-
-
-    //Elapsed time: 90.543716752s
-    //Elapsed time: 85.588292884s without coalesce(10)
-    //    .withColumn("predicate_ending", getLastPartOfURI(col("object2")))
-
-    // val dF3 = dF2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
-
-    //dF3.createOrReplaceTempView("triple")
-
-
-    //val sqlText2 = "SELECT same_predicate, COUNT(*) FROM triple group by same_predicate ORDER BY COUNT(*) DESC"
-    //val predicates = sparkSession.sql(sqlText2)
-    //predicates.show(15, 80)
-
-    //println(predicates.collect().take(20))
-
-     //val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
-      //getURIEnding(x.getString(0)) == getURIEnding(x.getString(1))))
-    //replacing collect :
-    val predicates = dF2.where(dF2.col("predicate1") === dF2.col("predicate2"))
-
     if (printReport) {
       println("Matched predictes in this step:")
       predicates.show(50, 80)
