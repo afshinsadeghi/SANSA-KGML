@@ -31,6 +31,7 @@ object ModuleExecutor {
   var delimiter1 = "\t"
   var delimiter2 = "\t"
   var printResults = false
+  var wordNetPredicateSimThreshold = 0.7
 
   def main(args: Array[String]) = {
     println("running a module...")
@@ -64,7 +65,7 @@ object ModuleExecutor {
       println("input5: If set to \\\"show\\\" the reporting during execution is shown")
       println("module name to run is not set. running with default values:")
       println("current modules are: PredicateStats,CommonPredicateStats,RankByPredicateType,PredicateMatching,PredicatePartitioning," +
-        "BlockSubjectsByTypeAndLiteral,CountSameASLinks,EntityMatching", "deductRelations", "WordNetEvaluation1", "WordNetEvaluation2")
+        "BlockSubjectsByTypeAndLiteral,CountSameASLinks,EntityMatching", "deductRelations", "WordNetEvaluation1", "WordNetEvaluation2", "PredicateExactMatch")
       // setting input1 to deductRelations when doing entity matching, it performs an extra step of relation extraction using current relations.
       input1 = "EntityMatching" // "EntityMatching" and etc (the list above)
 
@@ -163,7 +164,7 @@ object ModuleExecutor {
         val predicatePairs = profile {
           val simHandler = new SimilarityHandler(simThreshold)
           val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
-          blocking.getMatchedPredicates(df1, df2)
+          blocking.getMatchedPredicates(df1, df2, wordNetPredicateSimThreshold)
         }
         predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")
           .option("inferSchema", "false")
@@ -235,7 +236,7 @@ object ModuleExecutor {
             .option("maxColumns", "4")
             .load(predicateMatchesPath).toDF("predicate1", "predicate2")
         } else {
-          predicatePairs = blocking.getMatchedPredicates(df1, df2)
+          predicatePairs = blocking.getMatchedPredicates(df1, df2, wordNetPredicateSimThreshold)
           predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")
             .option("inferSchema", "false")
             .option("delimiter", "\t").save(predicateMatchesPath)
@@ -254,7 +255,7 @@ object ModuleExecutor {
 
           parentNodes1 = rExtractor.replaceMatched(parentNodes1, subjectsMatch.select("subject1", "subject2")
             .toDF("Subject3", "Subject4"))
-          predicatePairs = blocking.getMatchedPredicates(parentNodes1, parentNodes2)
+          predicatePairs = blocking.getMatchedPredicates(parentNodes1, parentNodes2, wordNetPredicateSimThreshold)
           var parentTriples = blocking.blockSubjectsByTypeAndLiteral(parentNodes1, parentNodes2, predicatePairs)
 
           var counter = 0
@@ -270,7 +271,7 @@ object ModuleExecutor {
 
             parentNodes1 = rExtractor.replaceMatched(parentNodes1, subjectsMatch.select("subject1", "subject2")
               .toDF("Subject3", "Subject4"))
-            predicatePairs = blocking.getMatchedPredicates(parentNodes1, parentNodes2)
+            predicatePairs = blocking.getMatchedPredicates(parentNodes1, parentNodes2, wordNetPredicateSimThreshold)
             parentTriples = blocking.blockSubjectsByTypeAndLiteral(parentNodes1, parentNodes2, predicatePairs)
             subjectsMatch.rdd.map(_.toString().replace("[", "").replace("]", "")).saveAsTextFile(input2 + counter.toString)
 
@@ -317,7 +318,7 @@ object ModuleExecutor {
             .option("maxColumns", "4")
             .load(predicateMatchesPath).toDF("predicate1", "predicate2")
         } else {
-          predicatePairs = blocking.getMatchedPredicates(df1, df2)
+          predicatePairs = blocking.getMatchedPredicates(df1, df2, wordNetPredicateSimThreshold)
           predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")
             .option("inferSchema", "false")
             .option("delimiter", "\t").save(predicateMatchesPath)
@@ -334,6 +335,35 @@ object ModuleExecutor {
     }
 
 
+
+    // to compare WordNet predicate match with exact match, and for evaluation of blocking with different version of same
+    // data set here we do exact match
+    if (input1 == "PredicateExactMatch") {
+      if (Files.exists(Paths.get(predicateMatchesPath))) {
+        println("predicate match folder already exists:" + predicateMatchesPath)
+        val predicatePairs = sparkSession.read.format("com.databricks.spark.csv")
+          .option("header", "false")
+          .option("inferSchema", "false")
+          .option("delimiter", "\t")
+          .option("comment", "#")
+          .option("maxColumns", "4")
+          .load(predicateMatchesPath).toDF("predicate1", "predicate2")
+        predicatePairs.show(30, 50)
+      } else {
+
+        val predicatePairs = profile {
+          val simHandler = new SimilarityHandler(simThreshold)
+          val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
+          blocking.getEqualPredicates(df1, df2)
+        }
+        predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")
+          .option("inferSchema", "false")
+          .option("delimiter", "\t").save(predicateMatchesPath)
+      }
+    }
+
+
+    //different data sets have different number of same as link, they influence the linking problem
     if (input1 == "CountSameASLinks") {
       val typeStats = new net.sansa_stack.kgml.rdf.TypeStats(sparkSession)
       typeStats.countSameASLinks(df1)

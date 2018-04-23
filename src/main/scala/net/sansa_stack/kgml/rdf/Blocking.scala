@@ -13,8 +13,6 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extends EvaluationHelper {
 
-  val wordNetPredicateSimThreshold = 0.7
-
   /*
   * get literal value in objects
    */
@@ -97,7 +95,7 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
     * @param df2
     * @return
     */
-  def getMatchedPredicates(df1: DataFrame, df2: DataFrame): DataFrame = {
+  def getMatchedPredicates(df1: DataFrame, df2: DataFrame, wordNetPredicateSimThreshold: Double): DataFrame = {
 
     //1. First filter all predicates in one column dataframes A and B, I expect all fit into memory
     //2. make a cartesian comparison of all them.
@@ -108,9 +106,9 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
 
     //val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
     val dF2 = df1.select(df1("predicate1")).distinct.crossJoin(df2.select(df2("predicate2")).distinct)
-    if(printReport){
+    if (printReport) {
       println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
-    println("5 lines of the First data-set:")
+      println("5 lines of the First data-set:")
       df1.show(5, 60)
       println("5 lines of the Second data-set:")
       df2.show(5, 60)
@@ -152,12 +150,12 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
     val sqlText2 = "SELECT predicate1, predicate2 FROM triple1 where equal = true"
     val predicates = sparkSession.sql(sqlText2)
 
-    //if (printReport) {
-    println("Matched predictes in this step:")
-    predicates.show(50, 80)
+    if (printReport) {
+      println("Matched predictes in this step:")
+      predicates.show(50, 80)
 
-    println("Numbre of Matched predictes is :" + predicates.count())
-    //}
+      println("Numbre of Matched predictes is :" + predicates.count())
+    }
     /*
 
     The result between drugdunmp dataset and dbpedia
@@ -219,6 +217,74 @@ in Persons dataset:
 
 
   /**
+    * Returns a two column dataFrame of matched predicates
+    *
+    * @param df1
+    * @param df2
+    * @return
+    */
+  def getEqualPredicates(df1: DataFrame, df2: DataFrame): DataFrame = {
+
+    //1. First filter all predicates in one column dataframes A and B, I expect all fit into memory
+    //2. make a cartesian comparison of all them.
+    //df1.show(20, 80)
+    //df2.show(20,80)
+    //val dF1 = df1.select(df1("predicate1")).distinct.coalesce(5).persist()
+    //  .withColumn("predicate_ending", getLastPartOfURI(col("object1")))
+
+    //val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
+    val dF2 = df1.select(df1("predicate1")).distinct.crossJoin(df2.select(df2("predicate2")).distinct)
+    if (printReport) {
+      println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
+      println("5 lines of the First data-set:")
+      df1.show(5, 60)
+      println("5 lines of the Second data-set:")
+      df2.show(5, 60)
+    }
+
+
+    //Elapsed time: 90.543716752s
+    //Elapsed time: 85.588292884s without coalesce(10)
+    //    .withColumn("predicate_ending", getLastPartOfURI(col("object2")))
+
+    // val dF3 = dF2.withColumn("same_predicate", wordNetPredicateMatch(col("predicate1"), col("predicate2")))
+
+    //dF3.createOrReplaceTempView("triple")
+
+
+    //val sqlText2 = "SELECT same_predicate, COUNT(*) FROM triple group by same_predicate ORDER BY COUNT(*) DESC"
+    //val predicates = sparkSession.sql(sqlText2)
+    //predicates.show(15, 80)
+
+    //println(predicates.collect().take(20))
+
+    val similarPairs = dF2.collect().map(x => (x.getString(0), x.getString(1),
+      getURIEnding(x.getString(0)) == getURIEnding(x.getString(1))))
+
+
+    val rdd1 = sparkSession.sparkContext.parallelize(similarPairs)
+    import sparkSession.sqlContext.implicits._
+    val matched = rdd1.toDF("predicate1", "predicate2", "equal")
+    //println("matched predicates:")
+    //matched.show(40)
+    //Elapsed time: 92.068153666s
+    //Elapsed time: 103.122292326s with using cache
+    //println("number of partitions for matched predicates = " + matched.rdd.partitions.size)
+
+    matched.createOrReplaceTempView("triple1")
+    val sqlText2 = "SELECT predicate1, predicate2 FROM triple1 where equal = true"
+    val predicates = sparkSession.sql(sqlText2)
+
+    if (printReport) {
+      println("Matched predictes in this step:")
+      predicates.show(50, 80)
+
+      println("Numbre of Matched predictes is :" + predicates.count())
+    }
+    predicates
+  }
+
+  /**
     * Block triples based on matched predicates
     *
     * @param df1
@@ -277,6 +343,7 @@ in Persons dataset:
 
   /**
     * This function get subjects and literals, it converts URI of objects to literals as well
+    *
     * @param samePredicateSubjectObjects
     * @return
     */
@@ -284,9 +351,9 @@ in Persons dataset:
     val typeSubjectWithLiteral = samePredicateSubjectObjects.withColumn("Literal1", getComparableValue(col("object1"))).
       withColumn("Literal2", getComparableValue(col("object2"))).where(col("Literal1").isNotNull && col("Literal2").isNotNull)
       .select("Subject1", "Literal1", "Subject2", "Literal2", "Predicate1", "Predicate2") //Predicates are used in cluster-ranking subjects
-    if(printReport){
+    if (printReport) {
       println(" In getSubjectsWithLiteral: here one subject and predicate can have several different literals, also it takes URIs as well")
-      typeSubjectWithLiteral.show(60,40)
+      typeSubjectWithLiteral.show(60, 40)
     }
     typeSubjectWithLiteral
   }
