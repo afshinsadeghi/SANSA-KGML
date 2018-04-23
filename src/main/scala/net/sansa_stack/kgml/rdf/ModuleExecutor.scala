@@ -354,6 +354,7 @@ object ModuleExecutor {
         val predicatePairs = profile {
           val simHandler = new SimilarityHandler(simThreshold)
           val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
+          blocking.printReport = printResults
           blocking.getEqualPredicates(df1, df2)
         }
         predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")
