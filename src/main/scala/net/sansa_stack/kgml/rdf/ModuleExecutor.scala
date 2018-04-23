@@ -164,6 +164,7 @@ object ModuleExecutor {
         val predicatePairs = profile {
           val simHandler = new SimilarityHandler(simThreshold)
           val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
+          blocking.printReport = printResults
           blocking.getMatchedPredicates(df1, df2, wordNetPredicateSimThreshold)
         }
         predicatePairs.write.format("com.databricks.spark.csv").option("header", "false")
@@ -181,7 +182,7 @@ object ModuleExecutor {
         val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
 
         blocking.printReport = this.printResults
-
+        matching.printReport = this.printResults
         if (!Files.exists(Paths.get(predicateMatchesPath))) {
           println("predicate pairs does not exist, run the module PredicateMatching first to create the match table,then try again.")
           System.exit(1)

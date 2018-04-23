@@ -458,8 +458,7 @@ only showing top 15 rows
 
     }
     else if(exactMatchEvaluation){
-       subjectsComparedByLiteral = firstMatchingLevel.where(col("Literal1").isNotNull && col("Literal2").isNotNull)
-        .withColumn("strSimilarity", simHandler.getExactMatchUDF(col("Literal1"), col("Literal2")))
+       subjectsComparedByLiteral = firstMatchingLevel.where(col("Literal1").isNotNull && col("Literal1") === col("Literal2"))
 
     }else{
        subjectsComparedByLiteral = firstMatchingLevel.where(col("Literal1").isNotNull && col("Literal2").isNotNull)
