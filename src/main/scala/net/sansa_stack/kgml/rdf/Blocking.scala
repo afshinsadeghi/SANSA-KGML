@@ -44,7 +44,7 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
   })
 
   /*
- * get literal value in objects
+ * get literal value in objects , to separate literals from URIs it keeps a < at the start of URIs
   */
   val getComparableValue = udf((S: String) => {
     //println("input:" + S)
@@ -73,12 +73,12 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
     }
   })
 
-
   def getURIEnding(str: String): String = {
     if (str.length > 0 && str.startsWith("<")) {
       try { //handling only URIs, ignoring literals
         var ending1 = str.split("<")(1).split(">")(0).split("/").last
         if (ending1.endsWith(" .")) ending1 = ending1.drop(2)
+        if (ending1.contains("#")) ending1 = ending1.split("#")(1)
         ending1
       } catch {
         case e: Exception => null
@@ -87,6 +87,21 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
       null
     }
   }
+
+  val URIEnding = udf((str: String) =>  {
+    if (str.length > 0 && str.startsWith("<")) {
+      try { //handling only URIs, ignoring literals
+        var ending1 = str.split("<")(1).split(">")(0).split("/").last
+        if (ending1.endsWith(" .")) ending1 = ending1.drop(2)
+        if (ending1.contains("#")) ending1 = ending1.split("#")(1)
+        ending1
+      } catch {
+        case e: Exception => null
+      }
+    } else {
+      null
+    }
+  })
 
   /**
     * Returns a two column dataFrame of matched predicates
@@ -105,13 +120,20 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
     //  .withColumn("predicate_ending", getLastPartOfURI(col("object1")))
 
     //val dF2 = dF1.crossJoin(df2.select(df2("predicate2")).distinct).coalesce(5).persist()
-    val dF2 = df1.select(df1("predicate1")).distinct.crossJoin(df2.select(df2("predicate2")).distinct)
+    val cores = Runtime.getRuntime.availableProcessors
+
+    val dF2 = df1.select(df1("predicate1")).distinct.withColumn("predicate11", URIEnding(col("predicate1"))).crossJoin(
+      df2.select(df2("predicate2")).distinct.withColumn("predicate22", URIEnding(col("predicate2")))
+    ).coalesce(cores * 2)
+
     if (printReport) {
       println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
       println("5 lines of the First data-set:")
       df1.show(5, 60)
       println("5 lines of the Second data-set:")
       df2.show(5, 60)
+      println("20 lines of the predicate cross join")
+      dF2.show(20,60)
     }
 
 
@@ -151,11 +173,11 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
     val sqlText2 = "SELECT predicate1, predicate2 FROM triple1 where equal = true"
     val predicates = sparkSession.sql(sqlText2)
 */
-val similarPairs =  dF2.withColumn("prdSimilarity", wordNetSim.getPredicateWordNetSimilarityUDF(col("predicate1"), col("predicate2")))
+    val similarPairs =  dF2.withColumn("prdSimilarity", wordNetSim.getPredicateWordNetSimilarityUDF(col("predicate11"), col("predicate22"))).coalesce(cores * 2)
 
     similarPairs.createOrReplaceTempView("matched")
     val sqlText1 = "SELECT predicate1, predicate2, prdSimilarity FROM matched WHERE prdSimilarity > " + wordNetPredicateSimThreshold.toString
-    val predicates = sparkSession.sql(sqlText1).drop("prdSimilarity")
+    val predicates = sparkSession.sql(sqlText1).drop("prdSimilarity").persist()
 
     if (printReport) {
       println("Matched predicates in this step:")

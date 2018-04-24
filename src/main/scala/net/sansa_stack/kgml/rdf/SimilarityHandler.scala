@@ -328,7 +328,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
   })
 
   val getPredicateWordNetSimilarityUDF = udf((S: String, S2: String) => {
-    jaccardPredicateSimilarityWithWordNet(getURIEnding(S),getURIEnding(S2))
+    jaccardPredicateSimilarityWithWordNet(S,S2)
   })
 
   val getExactMatchUDF = udf((S: String, S2: String) => {
@@ -337,18 +337,5 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
   })
 
 
-  def getURIEnding(str: String): String = {
-    if (str.length > 0 && str.startsWith("<")) {
-      try { //handling only URIs, ignoring literals
-        var ending1 = str.split("<")(1).split(">")(0).split("/").last
-        if (ending1.endsWith(" .")) ending1 = ending1.drop(2)
-        if (ending1.contains("#")) ending1 = ending1.split("#")(1)
-        ending1
-      } catch {
-        case e: Exception => null
-      }
-    } else {
-      null
-    }
-  }
+
 }
