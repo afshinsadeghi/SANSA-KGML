@@ -321,7 +321,7 @@ only showing top 15 rows
       //if (requiredSlots > slots) requiredSplit = requiredSlots / slots
 
       val commonPredicates = numberOfSameCommonTriples(lengthOfNumberOfSameCommonTriples - x)._1.toString
-      println("In bigger loop: processing triples with number of commonPredicates equal to " + commonPredicates)
+      println("In clusters loop: processing triples with number of commonPredicates equal to " + commonPredicates)
 
       var cluster =
         clusters.where(clusters("commonPredicateCount") === commonPredicates)
