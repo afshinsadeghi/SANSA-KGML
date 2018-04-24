@@ -161,12 +161,20 @@ only showing top 15 rows
 
 
   def clusterRankCounts(rankedSubjectWithCommonPredicateCount: DataFrame): DataFrame = {
-    rankedSubjectWithCommonPredicateCount.createOrReplaceTempView("groupedSubjects")
-    val sqlText3 = "SELECT  count CommonPredicates , COUNT(*) TriplesWithThisCommonPredicateNumber,  (Count * Count(*)) comparisonsRequired   FROM groupedSubjects group by COUNT ORDER BY COUNT(*) DESC"
-    val rankedCounts = sparkSession.sql(sqlText3)
-    if (printReport) {
+
+   val rankedCounts =  if (printReport) {
+      rankedSubjectWithCommonPredicateCount.createOrReplaceTempView("groupedSubjects")
+      val sqlText3 = "SELECT  count CommonPredicates , COUNT(*) TriplesWithThisCommonPredicateNumber,  (Count * Count(*)) comparisonsRequired   FROM groupedSubjects group by COUNT ORDER BY COUNT(*) DESC"
+      val rankedCounts = sparkSession.sql(sqlText3)
       println("ranking of common triple counts based on their count.")
       rankedCounts.show(15, 80)
+       rankedCounts
+    }else{ // optimized version of clusterRankCounts for speed : optimized version for speed reduce calculation of column comparisonsRequired
+     rankedSubjectWithCommonPredicateCount.createOrReplaceTempView("groupedSubjects")
+      val sqlText3 = "SELECT  count CommonPredicates , COUNT(*) TriplesWithThisCommonPredicateNumber  FROM groupedSubjects group by COUNT ORDER BY COUNT DESC"
+      val rankedCounts = sparkSession.sql(sqlText3)
+     // rankedCounts.show(15, 80)
+      rankedCounts
     }
     rankedCounts
     /*
@@ -261,14 +269,23 @@ only showing top 15 rows
     val clusterRankedCounts = this.clusterRankCounts(clusteredSubjects).repartition(cores * 3)
     val clusters = clusteredSubjects.toDF("Subject4", "Subject5", "commonPredicateCount")
 
-    val numberOfSameCommonTriples = clusterRankedCounts.select("CommonPredicates", "comparisonsRequired")
+    val numberOfSameCommonTriples = if (printReport) {
+     val numberOfSameCommonTriples = clusterRankedCounts.select("CommonPredicates", "comparisonsRequired")
       .rdd.map(r => (r(0).toString.toInt, r(1).toString.toInt)).sortByKey(false, 1).collect()
 
-    //if (printReport) {
       println("Blocking schedule: ")
       print(numberOfSameCommonTriples.map(_.toString().mkString).mkString("\n"))
       println()
-    //}
+      numberOfSameCommonTriples
+    }else{
+     val   numberOfSameCommonTriples = clusterRankedCounts.select("CommonPredicates")
+        .rdd.map(r => (r(0).toString.toInt,r(0).toString.toInt )).sortByKey(false, 1).collect()
+
+      println("Blocking schedule: ")   //works with optimized version for speed without calculation of column comparisonsRequired
+      print(numberOfSameCommonTriples.map(_._1.toString().mkString).mkString("\n"))
+      println()
+      numberOfSameCommonTriples
+    }
 
     val lengthOfNumberOfSameCommonTriples = numberOfSameCommonTriples.length
 
