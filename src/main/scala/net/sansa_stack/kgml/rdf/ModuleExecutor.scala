@@ -65,7 +65,7 @@ object ModuleExecutor {
       println("input5: If set to \\\"show\\\" the reporting during execution is shown")
       println("module name to run is not set. running with default values:")
       println("current modules are: PredicateStats,CommonPredicateStats,RankByPredicateType,PredicateMatching,PredicatePartitioning," +
-        "BlockSubjectsByTypeAndLiteral,CountSameASLinks,EntityMatching", "deductRelations", "WordNetEvaluation1", "WordNetEvaluation2", "PredicateExactMatch")
+        "ClusterSubjectsByType,CountSameASLinks,EntityMatching", "deductRelations", "WordNetEvaluation1", "WordNetEvaluation2", "PredicateExactMatch")
       // setting input1 to deductRelations when doing entity matching, it performs an extra step of relation extraction using current relations.
       input1 = "EntityMatching" // "EntityMatching" and etc (the list above)
 
@@ -173,33 +173,32 @@ object ModuleExecutor {
       }
     }
 
-    if (input1 == "BlockSubjectsByTypeAndLiteral") {
+    if (input1 == "ClusterSubjectsByType") {
 
       val simHandler = new SimilarityHandler(simThreshold)
+      val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
+      val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
 
+      blocking.printReport = this.printResults
+      matching.printReport = this.printResults
+      if (!Files.exists(Paths.get(predicateMatchesPath))) {
+        println("Predicate pairs does not exist, run the module PredicateMatching first to create the match table,then try again.")
+        System.exit(1)
+      }
+      println("Using predicate match folder : " + predicateMatchesPath)
+      val predicatePairs = sparkSession.read.format("com.databricks.spark.csv")
+        .option("header", "false")
+        .option("inferSchema", "false")
+        .option("delimiter", "\t")
+        .option("comment", "#")
+        .option("maxColumns", "4")
+        .load(predicateMatchesPath).toDF("predicate1", "predicate2")
       val clusteredSubjects = profile {
-        val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
-        val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
-
-        blocking.printReport = this.printResults
-        matching.printReport = this.printResults
-        if (!Files.exists(Paths.get(predicateMatchesPath))) {
-          println("predicate pairs does not exist, run the module PredicateMatching first to create the match table,then try again.")
-          System.exit(1)
-        }
-        println("predicate match folder already exists:" + predicateMatchesPath)
-        val predicatePairs = sparkSession.read.format("com.databricks.spark.csv")
-          .option("header", "false")
-          .option("inferSchema", "false")
-          .option("delimiter", "\t")
-          .option("comment", "#")
-          .option("maxColumns", "4")
-          .load(predicateMatchesPath).toDF("predicate1", "predicate2")
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
         val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral) //clusteredSubjects with number of predicates that matched
+        clusteredSubjects.show(50, 80)
         clusteredSubjects
       }
-      clusteredSubjects.show(200, 80)
     }
     //idea first round only use string matching on literal objects. Then on next rounds compare parents with parents
     // match them using both wordnet and predicate. if in their childer there are already a child matched, do not match, instead add its smilariy and count that at agregate time.
