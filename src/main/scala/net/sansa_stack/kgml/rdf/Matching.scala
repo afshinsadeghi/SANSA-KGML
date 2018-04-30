@@ -171,8 +171,10 @@ only showing top 15 rows
        rankedCounts
     }else{ // optimized version of clusterRankCounts for speed : optimized version for speed reduce calculation of column comparisonsRequired
      rankedSubjectWithCommonPredicateCount.createOrReplaceTempView("groupedSubjects")
-      val sqlText3 = "SELECT  count CommonPredicates , COUNT(*) TriplesWithThisCommonPredicateNumber  FROM groupedSubjects group by COUNT ORDER BY COUNT DESC"
-      val rankedCounts = sparkSession.sql(sqlText3)
+     // val sqlText3 = "SELECT  count CommonPredicates , COUNT(*) TriplesWithThisCommonPredicateNumber  FROM groupedSubjects group by COUNT ORDER BY COUNT DESC"
+     // Simplify it to just get the max and count from up to down. I do not count how many calculations are needed.
+     val sqlText3 = "SELECT  count CommonPredicates FROM groupedSubjects group by COUNT ORDER BY COUNT DESC"
+     val rankedCounts = sparkSession.sql(sqlText3)
      // rankedCounts.show(15, 80)
       rankedCounts
     }
@@ -246,13 +248,26 @@ only showing top 15 rows
     matchedUnion = matchedUnion.union(matched).dropDuplicates("Subject1","Subject2")
     matchedUnion.persist()
   }
+
   /**
-    *
-    * @param typeSubjectWithLiteral
-    * @param memoryInGB
+    *  clusters the subjects in data frame
+    * @param typeSubjectWithLiteral DataFrame
     * @return
     */
-  def scheduleLeafMatching(typeSubjectWithLiteral: DataFrame, memoryInGB: Integer): DataFrame = {
+  def clusterSubjects(typeSubjectWithLiteral: DataFrame): DataFrame ={
+    subjectWithLiteral = typeSubjectWithLiteral.drop("Predicate1", "Predicate2")
+    val clusteredSubjects = this.predicateBasedClusterRankSubjects(typeSubjectWithLiteral)
+    clusteredSubjects
+  }
+
+  /**
+    *
+    * @param typeSubjectWithLiteral DataFrame
+    * @param clusteredSubjects DataFrame
+    * @param memoryInGB Integer
+    * @return
+    */
+  def scheduleLeafMatching(typeSubjectWithLiteral : DataFrame , clusteredSubjects: DataFrame, memoryInGB: Integer): DataFrame = {
 
    /*
     subjectWithLiteral.createOrReplaceTempView("sameTypes")
@@ -263,10 +278,9 @@ only showing top 15 rows
 
       matchedPredicateTriplesSum.show()
 */
-    subjectWithLiteral = typeSubjectWithLiteral.drop("Predicate1", "Predicate2")
-    val clusteredSubjects = this.predicateBasedClusterRankSubjects(typeSubjectWithLiteral)
+
     val cores = Runtime.getRuntime.availableProcessors
-    val clusterRankedCounts = this.clusterRankCounts(clusteredSubjects).repartition(cores * 3)
+    val clusterRankedCounts = this.clusterRankCounts(clusteredSubjects).repartition(cores * 2)
     val clusters = clusteredSubjects.toDF("Subject4", "Subject5", "commonPredicateCount")
 
     val numberOfSameCommonTriples = if (printReport) {
@@ -281,9 +295,9 @@ only showing top 15 rows
      val   numberOfSameCommonTriples = clusterRankedCounts.select("CommonPredicates")
         .rdd.map(r => (r(0).toString.toInt,r(0).toString.toInt )).sortByKey(false, 1).collect()
 
-      println("Blocking schedule: ")   //works with optimized version for speed without calculation of column comparisonsRequired
-      print(numberOfSameCommonTriples.map(_._1.toString().mkString).mkString("\n"))
-      println()
+      //println("Blocking schedule: ")   //works with optimized version for speed without calculation of column comparisonsRequired
+      //print(numberOfSameCommonTriples.map(_._1.toString().mkString).mkString("\n"))
+      //println()
       numberOfSameCommonTriples
     }
 

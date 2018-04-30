@@ -177,7 +177,7 @@ object ModuleExecutor {
 
       val simHandler = new SimilarityHandler(simThreshold)
 
-      val SubjectsWithLiteral = profile {
+      val clusteredSubjects = profile {
         val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
         val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
 
@@ -196,9 +196,10 @@ object ModuleExecutor {
           .option("maxColumns", "4")
           .load(predicateMatchesPath).toDF("predicate1", "predicate2")
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
-        SubjectsWithLiteral
+        val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral) //clusteredSubjects with number of predicates that matched
+        clusteredSubjects
       }
-      SubjectsWithLiteral.show(200, 80)
+      clusteredSubjects.show(200, 80)
     }
     //idea first round only use string matching on literal objects. Then on next rounds compare parents with parents
     // match them using both wordnet and predicate. if in their childer there are already a child matched, do not match, instead add its smilariy and count that at agregate time.
@@ -245,7 +246,8 @@ object ModuleExecutor {
 
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
         //first level match using leaf literals
-        var subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory).persist()
+        val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral)
+        var subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, clusteredSubjects, memory).persist()
         //val allPredicatePairs = blocking.getMatchedPredicates(df1, df2)
 
         if (input1 == "deductRelations") {
@@ -304,10 +306,8 @@ object ModuleExecutor {
 
       val blocking = new net.sansa_stack.kgml.rdf.Blocking(sparkSession, simHandler)
       blocking.printReport = this.printResults
-      val rExtractor = new net.sansa_stack.kgml.rdf.RelationExtractor
 
       val matchedEntities = profile {
-
         import sparkSession.implicits._
         var predicatePairs = Seq.empty[(String, String)].toDF("predicate1", "predicate2") // matched Predicate Pairs, to initialize
         if (Files.exists(Paths.get(predicateMatchesPath))) {
@@ -325,7 +325,8 @@ object ModuleExecutor {
             .option("delimiter", "\t").save(predicateMatchesPath)
         }
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
-        val subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, memory)
+        val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral)
+        val subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, clusteredSubjects, memory)
         subjectsMatch
       }
       println("number of matched entities " + matchedEntities.count())
