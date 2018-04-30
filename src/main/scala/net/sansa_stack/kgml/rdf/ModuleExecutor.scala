@@ -13,6 +13,7 @@ import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.storage.StorageLevel
 
 case class StringTriples(Subject: String, Predicate: String, Object: String)
 
@@ -196,9 +197,10 @@ object ModuleExecutor {
       val clusteredSubjects = profile {
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
         val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral) //clusteredSubjects with number of predicates that matched
-        clusteredSubjects.show(50, 80)
-        clusteredSubjects
+        clusteredSubjects.persist()
       }
+      clusteredSubjects.show(50, 80)
+
     }
     //idea first round only use string matching on literal objects. Then on next rounds compare parents with parents
     // match them using both wordnet and predicate. if in their childer there are already a child matched, do not match, instead add its smilariy and count that at agregate time.
