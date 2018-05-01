@@ -39,7 +39,7 @@ class ReadDataSet extends EvaluationHelper {
     val df = preProcess(DF1)
     if (printReport) {
       println("Input data set:")
-      df.show(10, 40)
+      df.show(8, 60)
     }
     df
   }
