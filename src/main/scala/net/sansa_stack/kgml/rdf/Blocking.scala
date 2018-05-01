@@ -278,7 +278,7 @@ in Persons dataset:
     * @param df2
     * @param matchedPredicates
     */
-  def blockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): DataFrame = {
+  def  blockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): DataFrame = {
 
     //filter triples with literals by sparkssql
     //   val dF1 = df1.

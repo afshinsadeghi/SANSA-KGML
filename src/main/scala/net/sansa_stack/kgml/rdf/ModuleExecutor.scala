@@ -194,10 +194,15 @@ object ModuleExecutor {
         .option("comment", "#")
         .option("maxColumns", "4")
         .load(predicateMatchesPath).toDF("predicate1", "predicate2")
+
+      val dfNoLiteral1 = df1.filter(col("object1").startsWith("<"))//.persist()
+      val dfNoLiteral2 = df2.filter(col("object2").startsWith("<"))//.persist()
+      df1.unpersist()
+      df2.unpersist()
       val clusteredSubjects = profile {
-        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
-        df1.unpersist()
-        df2.unpersist()
+        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(dfNoLiteral1, dfNoLiteral2, predicatePairs)
+        dfNoLiteral1.unpersist()
+        dfNoLiteral2.unpersist()
         predicatePairs.unpersist() // to free disk space
         val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral) //clusteredSubjects with number of predicates that matched
         clusteredSubjects.show(50, 80) // adding show here to count real time usage
@@ -228,8 +233,9 @@ object ModuleExecutor {
 
         // val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")) //.persist()
 
-        //val dfNoLiteral1 = df1.filter(col("object1").startsWith("<"))//.persist()
-        //val dfNoLiteral2 = df2.filter(col("object2").startsWith("<"))//.persist()
+        // filter literals for blocking  , leaf blocking is only uses literals, deduction level uses the whole df1 and df2
+        val dfNoLiteral1 = df1.filter(col("object1").startsWith("<"))//.persist()
+        val dfNoLiteral2 = df2.filter(col("object2").startsWith("<"))//.persist()
 
         import sparkSession.implicits._
         var predicatePairs = Seq.empty[(String, String)].toDF("predicate1", "predicate2") // matched Predicate Pairs, to initialize
@@ -248,7 +254,7 @@ object ModuleExecutor {
             .option("delimiter", "\t").save(predicateMatchesPath)
         }
 
-        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(dfNoLiteral1, dfNoLiteral2, predicatePairs)
         //first level match using leaf literals
         val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral)
         var subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, clusteredSubjects, memory).persist()
@@ -292,7 +298,7 @@ object ModuleExecutor {
       println("number of matched entities pairs: " + matchedEntities.count.toString)
     }
 
-    //evaluation of WordNet with exact comparison in matching
+    //evaluation of WordNet with exact comparison in matching, here we do not filter objects for literals
     if (input1 == "WordNetEvaluation1" || input1 == "WordNetEvaluation2") {
       val simHandler = new SimilarityHandler(simThreshold)
       val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
