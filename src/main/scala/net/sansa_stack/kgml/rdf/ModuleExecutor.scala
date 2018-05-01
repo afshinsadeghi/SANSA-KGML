@@ -208,7 +208,6 @@ object ModuleExecutor {
         dfLiteral1.unpersist()
         dfLiteral2.unpersist()
         predicatePairs.unpersist() // to free disk space
-        SubjectsWithLiteral.show(30,80)
         val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral) //clusteredSubjects with number of predicates that matched
         clusteredSubjects.show(50, 80) // adding show here to count real time usage
         clusteredSubjects
