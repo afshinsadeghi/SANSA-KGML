@@ -259,7 +259,7 @@ in Persons dataset:
       predicates.show(50, 80)
       println("Numbre of Matched predictes is :" + predicates.count())
     }
-    predicates.select("predicate1, predicate2")
+    predicates.select("predicate1", "predicate2")
   }
 
   /**
