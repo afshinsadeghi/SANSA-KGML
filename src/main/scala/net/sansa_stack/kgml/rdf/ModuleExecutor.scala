@@ -345,9 +345,9 @@ object ModuleExecutor {
         df2.unpersist()
         predicatePairs.unpersist() //to free disk space
         val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral)
-        val subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, clusteredSubjects, memory)
-        subjectsMatch.show(10,30)  // adding show here to count real time usage in evaluation
-        subjectsMatch
+        //val subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, clusteredSubjects, memory)
+        clusteredSubjects.show(10,30)  // adding show here to count real time usage in evaluation
+        clusteredSubjects
       }
         println("number of matched entities " + matchedEntities.count())
 
