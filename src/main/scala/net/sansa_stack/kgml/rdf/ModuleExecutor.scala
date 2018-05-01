@@ -134,7 +134,7 @@ object ModuleExecutor {
       println("Stats of data set 1...")
       typeStats.calculateDFStats(df1)
       println("Stats of data set 2...")
-       df2 = df2.toDF("Subject1", "Predicate1", "Object1")
+      df2 = df2.toDF("Subject1", "Predicate1", "Object1")
       typeStats.calculateDFStats(df2)
     }
 
@@ -196,10 +196,13 @@ object ModuleExecutor {
         .load(predicateMatchesPath).toDF("predicate1", "predicate2")
       val clusteredSubjects = profile {
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        df1.unpersist()
+        df2.unpersist()
+        predicatePairs.unpersist() // to free disk space
         val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral) //clusteredSubjects with number of predicates that matched
-        clusteredSubjects.persist()
+        clusteredSubjects.show(50, 80) // adding show here to count real time usage
+        clusteredSubjects
       }
-      clusteredSubjects.show(50, 80)
 
     }
     //idea first round only use string matching on literal objects. Then on next rounds compare parents with parents
@@ -326,11 +329,15 @@ object ModuleExecutor {
             .option("delimiter", "\t").save(predicateMatchesPath)
         }
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        df1.unpersist()
+        df2.unpersist()
+        predicatePairs.unpersist() //to free disk space
         val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral)
         val subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, clusteredSubjects, memory)
+        subjectsMatch.show(10,30)  // adding show here to count real time usage in evaluation
         subjectsMatch
       }
-      println("number of matched entities " + matchedEntities.count())
+        println("number of matched entities " + matchedEntities.count())
 
       matchedEntities.write.format("com.databricks.spark.csv").option("header", "false")
         .option("inferSchema", "false")
