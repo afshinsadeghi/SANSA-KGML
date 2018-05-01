@@ -108,7 +108,7 @@ class Matching(sparkSession: SparkSession, simHandler : SimilarityHandler) exten
 
     subjectsWithPredicate.createOrReplaceTempView("sameTypes")
 
-    val sqlText2 = "SELECT  subject1, subject2, COUNT(*) as count FROM sameTypes group by subject1,subject2" // removed to make it faster : ORDER BY COUNT(*) DESC
+    val sqlText2 = "SELECT  subject1, subject2, COUNT(*) as count FROM sameTypes group by subject1,subject2 CLUSTER BY subject1,subject2" // removed to make it faster : ORDER BY COUNT(*) DESC
     val blockedSubjects2 = sparkSession.sql(sqlText2)
     if (printReport) {
       println("Ranking of subjects based on their common predicate")
