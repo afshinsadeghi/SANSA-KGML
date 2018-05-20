@@ -21,6 +21,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
   var maxJcn = 1.2876699500047589E7
   //var maxLesk = 7
   var maxLesk = 19
+  var maxHS = 200
 
 
   val stemmer = new Stemmer()
@@ -76,14 +77,15 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
       val string1AsNoun = wn.synset(string1, POS.NOUN, 1)
       val string2AsNoun = wn.synset(string2, POS.NOUN, 1)
       val nounPathSimilarity = wn.pathSimilarity(string1AsNoun, string2AsNoun)
-      val nounLchSimilarity = wn.lchSimilarity(string1AsNoun, string2AsNoun) / maxLch
-      val nounWupSimilarity = wn.wupSimilarity(string1AsNoun, string2AsNoun)
-      val nounResSimilarity = wn.resSimilarity(string1AsNoun, string2AsNoun) / maxRes
-      val nounJcnSimilarity = wn.jcnSimilarity(string1AsNoun, string2AsNoun) / maxJcn
-      val nounLinSimilarity = wn.linSimilarity(string1AsNoun, string2AsNoun)
-      val nounLeskSimilarity = wn.leskSimilarity(string1AsNoun, string2AsNoun) / maxLesk
+      val nounLchSimilarity = wn.lchSimilarity(string1AsNoun, string2AsNoun) / maxLch    //LeacockChodorow  LC
+      val nounWupSimilarity = wn.wupSimilarity(string1AsNoun, string2AsNoun)            //WuPalmer
+      val nounResSimilarity = wn.resSimilarity(string1AsNoun, string2AsNoun) / maxRes   // Resnik R
+      val nounJcnSimilarity = wn.jcnSimilarity(string1AsNoun, string2AsNoun) / maxJcn   // Jiang-Conrath JC
+      val nounLinSimilarity = wn.linSimilarity(string1AsNoun, string2AsNoun)            // Lin L
+      val nounLeskSimilarity = wn.leskSimilarity(string1AsNoun, string2AsNoun) / maxLesk  //Lesk
+      val nounHSSimilarity = wn.hsSimlarity(string1AsNoun, string2AsNoun) / maxHS
       nounMeanSim = (nounPathSimilarity + nounLchSimilarity + nounWupSimilarity + nounResSimilarity + nounJcnSimilarity
-        + nounLinSimilarity + nounLeskSimilarity) / 7
+        + nounLinSimilarity + nounLeskSimilarity + nounHSSimilarity) / 8
       //      println("nounPathSimilarity = "+nounPathSimilarity)
       //      println("nounLchSimilarity = "+nounLchSimilarity)
       //      println("nounWupSimilarity = " + nounWupSimilarity)
@@ -105,7 +107,7 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
     try {
       val string1AsVerb = wn.synset(string1, POS.VERB, 1)
       val string2AsVerb = wn.synset(string2, POS.VERB, 1)
-      //7 similarity measures
+      //8 similarity measures
       val verbPathSimilarity = wn.pathSimilarity(string1AsVerb, string2AsVerb)
       val verbLchSimilarity = wn.lchSimilarity(string1AsVerb, string2AsVerb) / maxLch
       val verbWupSimilarity = wn.wupSimilarity(string1AsVerb, string2AsVerb)
@@ -113,9 +115,10 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
       val verbJcnSimilarity = wn.jcnSimilarity(string1AsVerb, string2AsVerb) / maxJcn
       val verbLinSimilarity = wn.linSimilarity(string1AsVerb, string2AsVerb)
       val verbLeskSimilarity = wn.leskSimilarity(string1AsVerb, string2AsVerb) / maxLesk
+      val verbHSSimilarity = wn.hsSimlarity(string1AsVerb, string2AsVerb) / maxHS
 
       verbMeanSim = (verbPathSimilarity + verbLchSimilarity + verbWupSimilarity + verbResSimilarity + verbJcnSimilarity
-        + verbLinSimilarity + verbLeskSimilarity) / 7
+        + verbLinSimilarity + verbLeskSimilarity + verbHSSimilarity) / 8
 
     } catch {
       case e: Exception => verbMeanSim = 0.0

@@ -21,6 +21,7 @@ import edu.cmu.lti.jawjaw.util.WordNetUtil
 import edu.cmu.lti.lexical_db.NictWordNet
 import edu.cmu.lti.lexical_db.data.Concept
 import edu.cmu.lti.ws4j.RelatednessCalculator
+import edu.cmu.lti.ws4j.impl.HirstStOnge
 import net.didion.jwnl.JWNL
 import net.didion.jwnl.data.list.{PointerTargetNode, PointerTargetNodeList}
 import net.didion.jwnl.data.{IndexWord, PointerType, PointerUtils, Word}
@@ -74,6 +75,11 @@ object WordNet {
   def JCN_Similarity() = {
     val JCN_Similarity = new edu.cmu.lti.ws4j.impl.JiangConrath(lexdb)
     JCN_Similarity
+  }
+
+  def HS_Similarity() = {
+    val HS_Similarity = new edu.cmu.lti.ws4j.impl.HirstStOnge(lexdb)
+    HS_Similarity
   }
 
 }
@@ -150,6 +156,8 @@ class WordNet extends Serializable() {
   def linSimilarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, WordNet.LIN_Similarity)
 
   def leskSimilarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, WordNet.Lesk_Similarity)
+
+  def hsSimlarity(left: Synset, right: Synset): Double = getPathSimilarity(left, right, WordNet.HS_Similarity)
 
   def getPathSimilarity(left: Synset, right: Synset,
                         sim: RelatednessCalculator): Double = {
