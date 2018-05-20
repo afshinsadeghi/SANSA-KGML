@@ -67,6 +67,10 @@ object ModuleExecutor {
       println("module name to run is not set. running with default values:")
       println("current modules are: PredicateStats,CommonPredicateStats,RankByPredicateType,PredicateMatching,PredicatePartitioning," +
         "ClusterSubjectsByType,CountSameASLinks,EntityMatching", "deductRelations", "WordNetEvaluation1", "WordNetEvaluation2", "PredicateExactMatch")
+
+      println("Sample run1:  EntityMatching datasets/person11.nt datasets/person12.nt space space show")
+      println("Sample run2:  PredicateExactMatch datasets/dbpediaMovies.nt datasets/yagoMovies.nt tab tab hide")
+
       // setting input1 to deductRelations when doing entity matching, it performs an extra step of relation extraction using current relations.
       input1 = "EntityMatching" // "EntityMatching" and etc (the list above)
 
@@ -78,17 +82,17 @@ object ModuleExecutor {
       //input3 = "datasets/yagoSimple.nt"
       //input2 = "datasets/drugbank_dump.nt"
       //input3 = "datasets/dbpedia.drugs.nt"
-      //input2 = "datasets/person11.nt" //   894 matched
-      //input3 = "datasets/person12.nt"
+      input2 = "datasets/person11.nt" //   894 matched
+      input3 = "datasets/person12.nt"
       //input2 = "datasets/abstract1.nt" // To test extracting new relations on iterations:
       //input3 = "datasets/abstract2.nt" // Correctness condition: person2 and person4 are not matched by literals but their equivalency should be discovered by deduction.
       //input2 = "datasets/commonPredicatesTest.nt" // To test that only matched subjects are in same blocks:
       //input3 = "datasets/commonPredicates2Test.nt" // Correctness condition:person1 and car1 are not in any block of 2 common predicates
-      input2 = "datasets/dbpediaMovies.nt"
+      //input2 = "datasets/dbpediaMovies.nt"
       //input3 = "datasets/linkedmdb-2010.nt"
-      input3 = "datasets/yagoMovies.nt"
-      input4 = "tab" // delimiter default is tab it can be space.For dbpediaMovies and yagoMovies its tab and for person is space
-      input5 = "tab" // delimiter default is tab. it can be space
+      //input3 = "datasets/yagoMovies.nt"
+      input4 = "space" // delimiter can be or space.For dbpediaMovies and yagoMovies its tab and for person is space
+      input5 = "space" // delimiter default is tab. it can be space
       input6 = ""
     }
     println(input1)
@@ -134,7 +138,7 @@ object ModuleExecutor {
       println("Stats of data set 1...")
       typeStats.calculateDFStats(df1)
       println("Stats of data set 2...")
-       df2 = df2.toDF("Subject1", "Predicate1", "Object1")
+      df2 = df2.toDF("Subject1", "Predicate1", "Object1")
       typeStats.calculateDFStats(df2)
     }
 
@@ -194,12 +198,20 @@ object ModuleExecutor {
         .option("comment", "#")
         .option("maxColumns", "4")
         .load(predicateMatchesPath).toDF("predicate1", "predicate2")
+
+      val dfLiteral1 = df1.filter(!col("object1").startsWith("<"))//.persist()
+      val dfLiteral2 = df2.filter(!col("object2").startsWith("<"))//.persist()
+      df1.unpersist()
+      df2.unpersist()
       val clusteredSubjects = profile {
-        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(dfLiteral1, dfLiteral2, predicatePairs)
+        dfLiteral1.unpersist()
+        dfLiteral2.unpersist()
+        predicatePairs.unpersist() // to free disk space
         val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral) //clusteredSubjects with number of predicates that matched
-        clusteredSubjects.persist()
+        clusteredSubjects.show(50, 80) // adding show here to count real time usage
+        clusteredSubjects
       }
-      clusteredSubjects.show(50, 80)
 
     }
     //idea first round only use string matching on literal objects. Then on next rounds compare parents with parents
@@ -225,6 +237,9 @@ object ModuleExecutor {
 
         // val dfTripleWithLiteral2 = df2.filter(!col("object2").startsWith("<")) //.persist()
 
+        // filter literals for blocking  , leaf blocking is only uses literals, deduction level uses the whole df1 and df2
+        val dfLiteral1 = df1.filter(!col("object1").startsWith("<"))//.persist()
+        val dfLiteral2 = df2.filter(!col("object2").startsWith("<"))//.persist()
         //val dfNoLiteral1 = df1.filter(col("object1").startsWith("<"))//.persist()
         //val dfNoLiteral2 = df2.filter(col("object2").startsWith("<"))//.persist()
 
@@ -245,7 +260,7 @@ object ModuleExecutor {
             .option("delimiter", "\t").save(predicateMatchesPath)
         }
 
-        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(dfLiteral1, dfLiteral2, predicatePairs)
         //first level match using leaf literals
         val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral)
         var subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, clusteredSubjects, memory).persist()
@@ -289,7 +304,7 @@ object ModuleExecutor {
       println("number of matched entities pairs: " + matchedEntities.count.toString)
     }
 
-    //evaluation of WordNet with exact comparison in matching
+    //evaluation of WordNet with exact comparison in matching, here we do not filter objects for literals
     if (input1 == "WordNetEvaluation1" || input1 == "WordNetEvaluation2") {
       val simHandler = new SimilarityHandler(simThreshold)
       val matching = new net.sansa_stack.kgml.rdf.Matching(sparkSession, simHandler)
@@ -326,11 +341,15 @@ object ModuleExecutor {
             .option("delimiter", "\t").save(predicateMatchesPath)
         }
         val SubjectsWithLiteral = blocking.blockSubjectsByTypeAndLiteral(df1, df2, predicatePairs)
+        df1.unpersist()
+        df2.unpersist()
+        predicatePairs.unpersist() //to free disk space
         val clusteredSubjects = matching.clusterSubjects(SubjectsWithLiteral)
-        val subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, clusteredSubjects, memory)
-        subjectsMatch
+        //val subjectsMatch = matching.scheduleLeafMatching(SubjectsWithLiteral, clusteredSubjects, memory)
+        clusteredSubjects.show(10,30)  // adding show here to count real time usage in evaluation
+        clusteredSubjects
       }
-      println("number of matched entities " + matchedEntities.count())
+        println("number of matched entities " + matchedEntities.count())
 
       matchedEntities.write.format("com.databricks.spark.csv").option("header", "false")
         .option("inferSchema", "false")

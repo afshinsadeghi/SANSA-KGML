@@ -254,7 +254,8 @@ class SimilarityHandler(initialThreshold: Double) extends Serializable {
     string simlarity based on common string length
    */
   def stringDistanceSimilarity(s1: String, s2: String): Double = {
-    2 * (min(s1.length, s2.length) - levenshteinDistance(s1, s2)) / (s1.length + s2.length)
+   val sim =  2 * (min(s1.length, s2.length) - levenshteinDistance(s1, s2)) / (s1.length + s2.length)
+    if (sim < 0) 0 else sim
   }
 
 

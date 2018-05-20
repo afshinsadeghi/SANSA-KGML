@@ -128,10 +128,6 @@ class Blocking(sparkSession: SparkSession, wordNetSim: SimilarityHandler) extend
 
     if (printReport) {
       println("number of partitions after cross join = " + dF2.rdd.partitions.size) //200 partition
-      println("5 lines of the First data-set:")
-      df1.show(5, 60)
-      println("5 lines of the Second data-set:")
-      df2.show(5, 60)
       println("20 lines of the predicate cross join")
       dF2.show(20,60)
     }
@@ -254,21 +250,16 @@ in Persons dataset:
     */
   def getEqualPredicates(df1: DataFrame, df2: DataFrame): DataFrame = {
 
-    val predicates = df1.select("predicate1").distinct.join(df2.select("predicate2").distinct, df1("predicate1") === df2("predicate2"))
+    val DF1 = df1.select("predicate1").distinct.withColumn("predicate11", URIEnding(col("predicate1")))
+    val DF2 = df2.select("predicate2").distinct.withColumn("predicate22", URIEnding(col("predicate2")))
+    val predicates = DF1.join(DF2, DF1("predicate11") === DF2("predicate22"))
     if (printReport) {
       println("number of partitions after join = " + predicates.rdd.partitions.size) //200 partition
-      println("5 lines of the First data-set:")
-      df1.show(5, 60)
-      println("5 lines of the Second data-set:")
-      df2.show(5, 60)
-    }
-    if (printReport) {
       println("Matched predictes in this step:")
       predicates.show(50, 80)
-
       println("Numbre of Matched predictes is :" + predicates.count())
     }
-    predicates
+    predicates.select("predicate1", "predicate2")
   }
 
   /**
@@ -278,7 +269,7 @@ in Persons dataset:
     * @param df2
     * @param matchedPredicates
     */
-  def blockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): DataFrame = {
+  def  blockSubjectsByTypeAndLiteral(df1: DataFrame, df2: DataFrame, matchedPredicates: DataFrame): DataFrame = {
 
     //filter triples with literals by sparkssql
     //   val dF1 = df1.

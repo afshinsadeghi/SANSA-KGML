@@ -9,9 +9,9 @@ import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.dmg.pmml.Delimiter
 
 
-class ReadDataSet {
+class ReadDataSet extends EvaluationHelper {
 
-  def load(sparkSession: SparkSession, input2: String, delimiter1: String): DataFrame = {
+  def load(sparkSession: SparkSession, inputFile: String, delimiter1: String): DataFrame = {
     val stringSchema = StructType(Array(
       StructField("Subject", StringType, true),
       StructField("Predicate", StringType, true),
@@ -19,8 +19,8 @@ class ReadDataSet {
       StructField("dot", StringType, true))
     )
 
-    if (!Files.exists(Paths.get(input2))) {
-      println("input nt data set does not exist:" + input2)
+    if (!Files.exists(Paths.get(inputFile))) {
+      println("input nt data set does not exist:" + inputFile)
       System.exit(1)
     }
 
@@ -31,12 +31,16 @@ class ReadDataSet {
       .option("delimiter", delimiter1) // for DBpedia some times it is \t
       .option("maxColumns", "4")
       .schema(stringSchema)
-      .load(input3)
+      .load(inputFile)
 
     DF1 = DF1.drop(DF1.col("dot"))
 
     // defining schema and removing duplicates
     val df = preProcess(DF1)
+    if (printReport) {
+      println("Input data set:")
+      df.show(8, 60)
+    }
     df
   }
 
@@ -44,9 +48,9 @@ class ReadDataSet {
     //remove duplicates
     var df = DF.toDF("Subject1", "Predicate1", "Object1").dropDuplicates("Subject1", "Predicate1", "Object1") //.persist()
     // remove meta relations, these predicates mislead the blocking, because two cluster of different subjects have this predicate
-    df = df.where(df("Predicate1") =!= "<http://www.w3.org/2002/07/owl#sameAs>" )
-    df = df.where(df("Predicate1") =!= "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>" )
-      df
+    df = df.where(df("Predicate1") =!= "<http://www.w3.org/2002/07/owl#sameAs>")
+    df = df.where(df("Predicate1") =!= "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>")
+    df
   }
 
 }

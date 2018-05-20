@@ -24,6 +24,7 @@ class Matching(sparkSession: SparkSession, simHandler : SimilarityHandler) exten
   import sparkSession.sqlContext.implicits._
 
   var matchedUnion = Seq.empty[(String, String, String)].toDF("Subject1", "Subject2", "strSimilarity")
+  var matchedAggregate = Seq.empty[(String, String, String)].toDF("Subject1", "Subject2", "normStrSim")
   var literalBasedClusterRankSubjects = Seq.empty[(String, String, String)].toDF("Subject1", "Subject2", "count")
   var subjectWithLiteral = Seq.empty[(String, String, String , String)].toDF("Subject1", "Literal1", "Subject2", "Literal2")
   val getURIEnding = udf((str: String) => {
@@ -108,7 +109,7 @@ class Matching(sparkSession: SparkSession, simHandler : SimilarityHandler) exten
 
     subjectsWithPredicate.createOrReplaceTempView("sameTypes")
 
-    val sqlText2 = "SELECT  subject1, subject2, COUNT(*) as count FROM sameTypes group by subject1,subject2" // removed to make it faster : ORDER BY COUNT(*) DESC
+    val sqlText2 = "SELECT  subject1, subject2, COUNT(*) as count FROM sameTypes group by subject1,subject2 CLUSTER BY subject1,subject2" // removed to make it faster : ORDER BY COUNT(*) DESC
     val blockedSubjects2 = sparkSession.sql(sqlText2)
     if (printReport) {
       println("Ranking of subjects based on their common predicate")
@@ -341,7 +342,7 @@ only showing top 15 rows
         clusters.where(clusters("commonPredicateCount") === commonPredicates)
 
       //var matched =
-      this.matchCluster(cluster)
+      val localMatches = this.matchCluster(cluster)
       //this.matchCluster(subjectWithLiteral, cluster)
 
       //this.matchACluster(requiredSplit, subjectWithLiteral, cluster)
@@ -354,7 +355,14 @@ only showing top 15 rows
       //       this.matchAClusterOptimized(requiredSplit, subjectWithLiteral, cluster)
       //       //matchedUnion.persist()
       //     }
+      val uniqueLiteralMatchedSubjects = aggregateMatchedEntitiesPerCluster(localMatches, cluster,commonPredicates)
+      matchedAggregate  = matchedAggregate.union(uniqueLiteralMatchedSubjects)
+      if (printReport) {
+        println("finding pair sums...")
+        uniqueLiteralMatchedSubjects.show(10,60)
+      }
     }
+    /*
     if (printReport) {
       println("finding pair sums...")
     }
@@ -362,14 +370,16 @@ only showing top 15 rows
     //literalBasedClusterRankSubjects = clusteredSubjects
     val uniqueLiteralMatchedSubjects = aggregateMatchedEntities(matchedUnion, literalBasedClusterRankSubjects)
     uniqueLiteralMatchedSubjects
+    */
+    matchedAggregate
   }
 
-  def matchCluster(cluster: DataFrame): Unit = {
+  def matchCluster(cluster: DataFrame): DataFrame = {
 
     //val subjectWithLiteral = typeSubjectWithLiteral.toDF("Subject1", "Literal1", "Subject2", "Literal2")
 
       val firstMatchingLevel = subjectWithLiteral
-        .join(cluster.drop("commonPredicateCount").except(matchedUnion.drop("strSimilarity")),
+        .join(cluster.drop("commonPredicateCount").except(matchedAggregate.drop("normStrSim")),
             subjectWithLiteral("subject1") === cluster("Subject4") &&
             subjectWithLiteral("subject2") === cluster("Subject5")
         , "inner" //  && here filter a portion of slotSize for each count and put that in a memory block
@@ -380,6 +390,7 @@ only showing top 15 rows
       }
       var matched = getMatchedEntityPairsBasedOnLiteralSim(firstMatchingLevel)
       matchedUnion = matchedUnion.union(matched).persist()
+    matched
   }
 
 /*
@@ -492,6 +503,10 @@ only showing top 15 rows
        subjectsComparedByLiteral = firstMatchingLevel.where(col("Literal1").isNotNull && col("Literal1") === col("Literal2"))
 
     }else{
+      // in entity matching of their literals
+       if (printReport) {
+         println("In entity matching of their literals")
+       }
        subjectsComparedByLiteral = firstMatchingLevel.where(col("Literal1").isNotNull && col("Literal2").isNotNull)
       .withColumn("strSimilarity", simHandler.getSimilarityUDF(col("Literal1"), col("Literal2")))
     }
@@ -501,14 +516,15 @@ only showing top 15 rows
     //   val subjectsComparedByLiteral = rdd1.toDF("Subject1", "Subject2", "strSimilarity")
     if (printReport) {
       println("Number of compared pairs:" + subjectsComparedByLiteral.count())
-      subjectsComparedByLiteral.show(40, 80)
+      //println("subjectsComparedByLiteral")
+      subjectsComparedByLiteral.show(30, 80)
     }
     subjectsComparedByLiteral.createOrReplaceTempView("matched")
     val sqlText1 = "SELECT Subject1, Subject2, strSimilarity FROM matched WHERE strSimilarity > " + similarityThreshold.toString
     val matchedSubjects = sparkSession.sql(sqlText1) //.persist()
     if (printReport) {
-      matchedSubjects.show(50, 80)
-      println("the number of matched pair of subjects that are paired by matched predicate and matched literals")
+      matchedSubjects.show(30, 80)
+      println("The number of matched pair of subjects that are paired by matched predicate and matched literals")
       val sqlText3 = "SELECT count(*) FROM matched where strSimilarity > " + similarityThreshold.toString
       val typedTriples3 = sparkSession.sql(sqlText3)
       typedTriples3.show()
@@ -555,6 +571,43 @@ only showing top 15 rows
     }
     matchedSubjectsWithNormSim //filtered once by literal comparison
   }
+
+  /**
+    * I collect sum of similarity for each pair of subject1 and subject2 sum the similarity of all their literals and make a norm of them.
+    * those literals that are more than the threshold
+    * so here we have unique pairs of subject1 and subject2
+    *
+    * @param localMatches
+    * @return
+    */
+  def aggregateMatchedEntitiesPerCluster(localMatches: DataFrame, clusteredSubjects: DataFrame, commonPredicatesCount : String): DataFrame = {
+
+    localMatches.createOrReplaceTempView("matched")
+    val sqlText1 = "SELECT Subject1, Subject2, SUM(strSimilarity) sumStrSimilarity FROM matched Group By Subject1, Subject2"
+    val matchedSubjects = sparkSession.sql(sqlText1)
+
+    matchedSubjects.createOrReplaceTempView("matchedJoined1")
+    if(commonPredicatesCount == "3"){normedStringSimilarityThreshold = .80}
+    if(commonPredicatesCount == "2"){normedStringSimilarityThreshold = .90}
+    if(commonPredicatesCount == "1"){normedStringSimilarityThreshold = .95}
+
+    val sqlText2 = "SELECT Subject1, Subject2, sumStrSimilarity,  sumStrSimilarity/" + commonPredicatesCount +" normStrSim FROM matchedJoined1 WHERE" +
+      " WHERE Subject1 != Subject2 AND sumStrSimilarity/" + commonPredicatesCount +" > " + normedStringSimilarityThreshold.toString  //its Jaccard of children sim as in http://afshn.com/papers/Sadeghi_SCM-KG.pdf
+    val matchedSubjectsWithNormSim = sparkSession.sql(sqlText2).select("Subject1", "Subject2", "normStrSim")
+
+    if (printReport) {
+    matchedSubjectsWithNormSim.show(15,80)
+      println("threshold:" + normedStringSimilarityThreshold)
+      matchedSubjectsWithNormSim.createOrReplaceTempView("matchedLitNormed")
+      println("The number of unique matched pair of subjects that are paired by matched predicate and matched literals")
+      val sqlText3 = "SELECT count(*) From matchedLitNormed "
+      val typedTriples3 = sparkSession.sql(sqlText3)
+      typedTriples3.show()
+    }
+    matchedSubjectsWithNormSim //filtered once by literal comparison
+  }
+
+
 
   /**
     * They are two type of non-literal objects.
